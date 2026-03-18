@@ -1,0 +1,8 @@
+{
+  "name": "ofek-monster-game",
+  "version": "1.0.0",
+  "description": "Ofek's Monster Trainer Game",
+  "scripts": {
+    "start": "npx serve -s . -l $PORT"
+  }
+}
