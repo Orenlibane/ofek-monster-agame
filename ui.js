@@ -2008,7 +2008,7 @@ function drawSettingsScreen(ctx, settings, cursor) {
     ctx.fillStyle = 'rgba(0,0,0,0.65)';
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    const pw = 460, ph = 380;
+    const pw = 460, ph = 430;
     const px = (SCREEN_WIDTH - pw) / 2;
     const py = (SCREEN_HEIGHT - ph) / 2;
     drawPanel(ctx, px, py, pw, ph, 'rgba(10,12,35,0.96)', 'rgba(160,170,220,0.5)', 2, 14);
@@ -2027,16 +2027,17 @@ function drawSettingsScreen(ctx, settings, cursor) {
     ctx.stroke();
 
     const options = [
-        ['מהירות קרב', ['איטי', 'רגיל', 'מהיר'], settings.battle_speed || 0],
-        ['מהירות טקסט', ['איטי', 'רגיל', 'מהיר'], settings.text_speed || 0],
-        ['אפקטי קרב', ['כבוי', 'פעיל'], settings.battle_effects || 0],
-        ['צליל', ['כבוי', 'פעיל'], settings.sound || 0],
-        ['GOD MODE', ['כבוי', 'פעיל'], settings.god_mode || 0],
+        { label: 'מהירות קרב', choices: ['איטי', 'רגיל', 'מהיר'], value: settings.battle_speed || 0 },
+        { label: 'מהירות טקסט', choices: ['איטי', 'רגיל', 'מהיר'], value: settings.text_speed || 0 },
+        { label: 'אפקטי קרב', choices: ['כבוי', 'פעיל'], value: settings.battle_effects || 0 },
+        { label: 'צליל', choices: ['כבוי', 'פעיל'], value: settings.sound || 0 },
+        { label: 'GOD MODE', choices: ['כבוי', 'פעיל'], value: settings.god_mode || 0 },
+        { label: 'שמור משחק', action: true },
     ];
 
     let oy = py + 64;
     for (let i = 0; i < options.length; i++) {
-        const [label, choices, value] = options[i];
+        const opt = options[i];
         const selected = i === cursor;
         const color = selected ? YELLOW : WHITE;
 
@@ -2047,22 +2048,38 @@ function drawSettingsScreen(ctx, settings, cursor) {
             ctx.fill();
         }
 
-        ctx.fillStyle = color;
-        ctx.font = `${selected ? 'bold ' : ''}15px ${FONT_MAIN}`;
-        ctx.fillText(label, px + 30, oy + 22);
+        if (opt.action) {
+            // Save button row
+            ctx.fillStyle = color;
+            ctx.font = `${selected ? 'bold ' : ''}15px ${FONT_MAIN}`;
+            const saveLabel = opt.label;
+            const saveLabelW = ctx.measureText(saveLabel).width;
+            ctx.fillText(saveLabel, px + pw / 2 - saveLabelW / 2, oy + 22);
+            if (selected) {
+                ctx.fillStyle = 'rgba(140,210,255,0.6)';
+                ctx.font = `12px ${FONT_MAIN}`;
+                const hint = 'לחץ Enter לשמירה';
+                const hintWs = ctx.measureText(hint).width;
+                ctx.fillText(hint, px + pw / 2 - hintWs / 2, oy + 40);
+            }
+        } else {
+            ctx.fillStyle = color;
+            ctx.font = `${selected ? 'bold ' : ''}15px ${FONT_MAIN}`;
+            ctx.fillText(opt.label, px + 30, oy + 22);
 
-        const valText = choices[value] || choices[0];
-        ctx.fillStyle = 'rgba(140,210,255,0.85)';
-        ctx.font = `bold 15px ${FONT_MAIN}`;
-        const valW = ctx.measureText(valText).width;
-        const vx = px + pw - 30 - valW;
-        ctx.fillText(valText, vx, oy + 22);
+            const valText = opt.choices[opt.value] || opt.choices[0];
+            ctx.fillStyle = 'rgba(140,210,255,0.85)';
+            ctx.font = `bold 15px ${FONT_MAIN}`;
+            const valW = ctx.measureText(valText).width;
+            const vx = px + pw - 30 - valW;
+            ctx.fillText(valText, vx, oy + 22);
 
-        if (selected) {
-            ctx.fillStyle = YELLOW;
-            ctx.font = `bold 16px ${FONT_MAIN}`;
-            ctx.fillText('◂', vx - 22, oy + 22);
-            ctx.fillText('▸', vx + valW + 8, oy + 22);
+            if (selected) {
+                ctx.fillStyle = YELLOW;
+                ctx.font = `bold 16px ${FONT_MAIN}`;
+                ctx.fillText('◂', vx - 22, oy + 22);
+                ctx.fillText('▸', vx + valW + 8, oy + 22);
+            }
         }
 
         oy += 52;

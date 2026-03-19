@@ -22,6 +22,7 @@ const SETTINGS_OPTIONS = [
     ['battle_effects', 2],
     ['sound',          2],
     ['god_mode',       2],
+    ['save_game',      0],  // 0 = action button (no cycling)
 ];
 
 class Game {
@@ -91,6 +92,7 @@ class Game {
         this.battle = null;
         this.partyCursor = 0;
         this._healFlash = 0;
+        this._saveFlash = 0;
 
         // Transition
         this._transitionProgress = 0.0;
@@ -99,6 +101,9 @@ class Game {
         this._pendingTrainer = null;
         this._shopMessage = '';
         this._shopMsgTimer = 0;
+
+        // Current user (set by login)
+        this._currentUser = null;
 
         // Input
         this._keysDown = new Set();
@@ -203,6 +208,7 @@ class Game {
         } else if (tileName === 'door' || tileName === 'heal') {
             this.player.healAll();
             this._healFlash = 30;
+            saveGame(this);
         } else if (tileName === 'shop') {
             this.state = GameState.SHOP;
             this.shopCursor = 0;
@@ -232,8 +238,22 @@ class Game {
             this.settingsCursor = Math.max(0, this.settingsCursor - 1);
         } else if (key === 'ArrowDown') {
             this.settingsCursor = Math.min(SETTINGS_OPTIONS.length - 1, this.settingsCursor + 1);
-        } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        } else if (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Enter' || key === 'z' || key === 'Z') {
             const [optKey, numChoices] = SETTINGS_OPTIONS[this.settingsCursor];
+
+            // Handle save action
+            if (optKey === 'save_game') {
+                if (key === 'Enter' || key === 'z' || key === 'Z') {
+                    const ok = saveGame(this);
+                    this._shopMessage = ok ? '!המשחק נשמר בהצלחה' : '!שגיאה בשמירה';
+                    this._shopMsgTimer = 90;
+                    this._saveFlash = 30;
+                }
+                return;
+            }
+
+            if (key === 'Enter' || key === 'z' || key === 'Z') return;
+
             let current = this.settings[optKey] || 0;
             if (key === 'ArrowRight') {
                 this.settings[optKey] = (current + 1) % numChoices;
@@ -273,6 +293,7 @@ class Game {
             this.player.addToParty(starter);
             this.player.registerCaught(chosenId);
             this.state = GameState.OVERWORLD;
+            saveGame(this);
         }
     }
 
@@ -302,6 +323,7 @@ class Game {
                 this.player.inventory.add(item.name, 1);
                 this._shopMessage = `!${item.name} נקנה`;
                 this._shopMsgTimer = 60;
+                saveGame(this);
             } else {
                 this._shopMessage = '!אין לך מספיק מטבעות';
                 this._shopMsgTimer = 60;
@@ -404,6 +426,7 @@ class Game {
         this.battle = null;
         this._transitionProgress = 1.0;
         this.state = GameState.TRANSITION_OUT;
+        saveGame(this);
     }
 
     // Update
@@ -437,6 +460,9 @@ class Game {
 
         if (this._healFlash > 0) {
             this._healFlash--;
+        }
+        if (this._saveFlash > 0) {
+            this._saveFlash--;
         }
         if (this._shopMsgTimer > 0) {
             this._shopMsgTimer--;
@@ -475,6 +501,19 @@ class Game {
             drawOverworld(ctx, this.gameMap, this.player, this._frameCount);
             drawHud(ctx, this.player);
             drawSettingsScreen(ctx, this.settings, this.settingsCursor);
+            // Save flash message
+            if (this._saveFlash > 0) {
+                const alpha = Math.min(1, this._saveFlash / 15);
+                ctx.fillStyle = `rgba(50,200,255,${alpha * 0.06})`;
+                ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+                const msg = this._shopMessage;
+                ctx.font = `bold 15px ${FONT_MAIN}`;
+                const w = ctx.measureText(msg).width;
+                const bx = SCREEN_WIDTH / 2 - w / 2 - 14;
+                drawPanel(ctx, bx, 78, w + 28, 30, 'rgba(20,50,80,0.85)', 'rgba(100,180,220,0.5)', 1.5, 8);
+                ctx.fillStyle = 'rgb(140,220,255)';
+                ctx.fillText(msg, SCREEN_WIDTH / 2 - w / 2, 99);
+            }
         } else if (this.state === GameState.TRANSITION_IN || this.state === GameState.TRANSITION_OUT) {
             drawOverworld(ctx, this.gameMap, this.player, this._frameCount);
             drawHud(ctx, this.player);
@@ -607,10 +646,209 @@ class Game {
 }
 
 // ===================================================================
+// Save / Load system
+// ===================================================================
+
+function serializeMonster(m) {
+    return {
+        speciesId: m.speciesId,
+        name: m.name,
+        monType: m.monType,
+        level: m.level,
+        experience: m.experience,
+        hp: m.hp,
+        moves: m.moves.map(mv => ({
+            name: mv.name, moveType: mv.moveType,
+            power: mv.power, accuracy: mv.accuracy,
+            pp: mv.pp, currentPP: mv.currentPP,
+        })),
+    };
+}
+
+function deserializeMonster(data) {
+    const species = Object.values(SPECIES_DB).find(s => s.id === data.speciesId);
+    if (!species) return null;
+    const m = createMonster(data.speciesId, data.level);
+    m.name = data.name;
+    m.experience = data.experience;
+    m.hp = Math.min(data.hp, m.maxHp);
+    if (data.moves && data.moves.length > 0) {
+        m.moves = data.moves.map(mv => {
+            const move = new Move(mv.name, mv.moveType, mv.power, mv.accuracy, mv.pp);
+            move.currentPP = mv.currentPP;
+            return move;
+        });
+    }
+    return m;
+}
+
+function buildSaveData(game) {
+    return {
+        version: 1,
+        timestamp: Date.now(),
+        player: {
+            name: game.player.name,
+            col: game.player.col,
+            row: game.player.row,
+            facing: game.player.facing,
+            coins: game.player.coins,
+            party: game.player.party.map(serializeMonster),
+            inventory: { ...game.player.inventory.items },
+            discovered: [...game.player.discovered],
+            caught: [...game.player.caught],
+            defeatedTrainers: [...game.player.defeatedTrainers],
+        },
+        storage: {
+            monsters: game.storage.monsters.map(serializeMonster),
+        },
+        settings: { ...game.settings },
+        hasStarter: game.state !== GameState.START_SCREEN && game.state !== GameState.CHOOSE_STARTER,
+    };
+}
+
+function applySaveData(game, data) {
+    if (!data || !data.player) return false;
+    const p = data.player;
+    game.player.name = p.name;
+    game.player.col = p.col;
+    game.player.row = p.row;
+    game.player.facing = p.facing || 'down';
+    game.player.coins = p.coins || 0;
+    game.player._visualX = p.col * TILE_SIZE;
+    game.player._visualY = p.row * TILE_SIZE;
+
+    // Party
+    game.player.party = [];
+    for (const md of (p.party || [])) {
+        const mon = deserializeMonster(md);
+        if (mon) game.player.party.push(mon);
+    }
+
+    // Inventory
+    game.player.inventory = new Inventory();
+    if (p.inventory) {
+        for (const [k, v] of Object.entries(p.inventory)) {
+            game.player.inventory.items[k] = v;
+        }
+    }
+
+    // Sets
+    game.player.discovered = new Set(p.discovered || []);
+    game.player.caught = new Set(p.caught || []);
+    game.player.defeatedTrainers = new Set(p.defeatedTrainers || []);
+
+    // Storage
+    game.storage.monsters = [];
+    if (data.storage && data.storage.monsters) {
+        for (const md of data.storage.monsters) {
+            const mon = deserializeMonster(md);
+            if (mon) game.storage.monsters.push(mon);
+        }
+    }
+
+    // Settings
+    if (data.settings) {
+        Object.assign(game.settings, data.settings);
+    }
+
+    // If save had a starter, go to overworld
+    if (data.hasStarter && game.player.party.length > 0) {
+        game.state = GameState.OVERWORLD;
+    }
+
+    return true;
+}
+
+function saveGame(game) {
+    if (!game._currentUser) return false;
+    const key = 'monster_save_' + game._currentUser;
+    const data = buildSaveData(game);
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function loadGame(game, username) {
+    const key = 'monster_save_' + username;
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        return applySaveData(game, data);
+    } catch (e) {
+        return false;
+    }
+}
+
+function hasSaveData(username) {
+    const key = 'monster_save_' + username;
+    return localStorage.getItem(key) !== null;
+}
+
+// ===================================================================
 // Entry point
 // ===================================================================
 
 window.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('gameCanvas');
-    new Game(canvas);
+    const overlay = document.getElementById('loginOverlay');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginInput = document.getElementById('loginUsername');
+    const loginMsg = document.getElementById('loginMsg');
+
+    let gameInstance = null;
+
+    function startGame(username) {
+        overlay.classList.add('hidden');
+        gameInstance = new Game(canvas);
+        gameInstance._currentUser = username;
+
+        const loaded = loadGame(gameInstance, username);
+        if (loaded) {
+            loginMsg.textContent = '';
+        }
+    }
+
+    function doLogin() {
+        const username = loginInput.value.trim();
+        if (!username) {
+            loginMsg.className = 'login-msg error';
+            loginMsg.textContent = 'נא להכניס שם משתמש';
+            return;
+        }
+        if (username.length < 2) {
+            loginMsg.className = 'login-msg error';
+            loginMsg.textContent = 'שם משתמש חייב להיות לפחות 2 תווים';
+            return;
+        }
+
+        // Save username to remember last login
+        localStorage.setItem('monster_last_user', username);
+
+        if (hasSaveData(username)) {
+            loginMsg.className = 'login-msg success';
+            loginMsg.textContent = '...טוען משחק שמור';
+            setTimeout(() => startGame(username), 400);
+        } else {
+            loginMsg.className = 'login-msg success';
+            loginMsg.textContent = '...!שחקן חדש, בהצלחה';
+            setTimeout(() => startGame(username), 400);
+        }
+    }
+
+    loginBtn.addEventListener('click', doLogin);
+    loginInput.addEventListener('keydown', (e) => {
+        e.stopPropagation(); // Prevent game from intercepting keys
+        if (e.key === 'Enter') doLogin();
+    });
+
+    // Pre-fill last username
+    const lastUser = localStorage.getItem('monster_last_user');
+    if (lastUser) loginInput.value = lastUser;
+
+    // Focus input
+    loginInput.focus();
 });
