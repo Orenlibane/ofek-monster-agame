@@ -78,6 +78,10 @@ class Game {
             { name: 'מגן תקיפה',        price: 200, desc: 'מגביר תקיפה בקרב הבא' },
         ];
 
+        // Cave boss
+        this.caveBossDefeated = false;
+        this._caveNotified = false; // shown "cave appeared" message
+
         // NPC Trainers
         this.trainers = this._createTrainers();
 
@@ -213,12 +217,23 @@ class Game {
             this.state = GameState.SHOP;
             this.shopCursor = 0;
             return;
+        } else if (tileName === 'cave_door') {
+            if (!this.caveBossDefeated) {
+                this._startCaveBoss();
+            } else {
+                this._shopMessage = '!כבר ניצחת את דרקו אופק';
+                this._shopMsgTimer = 60;
+            }
+            return;
         }
 
         // Check trainer vision
         if (this.state === GameState.OVERWORLD) {
             this._checkTrainerVision();
         }
+
+        // Check cave unlock
+        this._checkCaveUnlock();
     }
 
     _partyKey(key) {
@@ -379,6 +394,28 @@ class Game {
         }
     }
 
+    _checkCaveUnlock() {
+        if (this.gameMap.caveSpawned) return;
+        const count = this.player.party.filter(m => m.level >= 10).length;
+        if (count >= 2) {
+            this.gameMap.spawnCave();
+            this._shopMessage = '!מערה מסתורית הופיעה בדרום-מזרח המפה';
+            this._shopMsgTimer = 120;
+        }
+    }
+
+    _startCaveBoss() {
+        const boss = createMonster(CAVE_CONFIG.bossSpeciesId, CAVE_CONFIG.bossLevel);
+        this._pendingEnemy = boss;
+        this._pendingTrainer = {
+            id: 'cave_boss',
+            name: 'בוס המערה',
+            party: [boss],
+        };
+        this._transitionProgress = 0.0;
+        this.state = GameState.TRANSITION_IN;
+    }
+
     _startTrainerBattle(trainer) {
         // Create fresh copies of trainer monsters for the battle
         const freshParty = trainer.party.map(m => {
@@ -417,6 +454,10 @@ class Game {
         // Mark trainer as defeated
         if (this.battle.isTrainerBattle && this.battle.trainerData && result === BattleResult.WIN) {
             this.player.defeatedTrainers.add(this.battle.trainerData.id);
+            // Cave boss defeated
+            if (this.battle.trainerData.id === 'cave_boss') {
+                this.caveBossDefeated = true;
+            }
         }
         if (result === BattleResult.LOSE) {
             this.player.healAll();
@@ -426,6 +467,8 @@ class Game {
         this.battle = null;
         this._transitionProgress = 1.0;
         this.state = GameState.TRANSITION_OUT;
+        // Check cave unlock after battle (level ups may have triggered it)
+        this._checkCaveUnlock();
         saveGame(this);
     }
 
@@ -484,6 +527,7 @@ class Game {
             this._renderDayNight();
             drawHud(ctx, this.player);
             this._renderHealFlash();
+            this._renderOverworldMessage();
             this._renderControlsHint();
         } else if (this.state === GameState.BATTLE) {
             if (this.battle) {
@@ -635,6 +679,20 @@ class Game {
         }
     }
 
+    _renderOverworldMessage() {
+        if (this._shopMsgTimer > 0 && this._shopMessage) {
+            const ctx = this.ctx;
+            const alpha = Math.min(1, this._shopMsgTimer / 20);
+            const msg = this._shopMessage;
+            ctx.font = `bold 15px ${FONT_MAIN}`;
+            const w = ctx.measureText(msg).width;
+            const bx = SCREEN_WIDTH / 2 - w / 2 - 14;
+            drawPanel(ctx, bx, 78, w + 28, 30, `rgba(60,20,10,${alpha * 0.85})`, `rgba(255,120,40,${alpha * 0.5})`, 1.5, 8);
+            ctx.fillStyle = `rgba(255,180,80,${alpha})`;
+            ctx.fillText(msg, SCREEN_WIDTH / 2 - w / 2, 99);
+        }
+    }
+
     _renderControlsHint() {
         const ctx = this.ctx;
         ctx.fillStyle = 'rgba(130,140,170,0.5)';
@@ -642,6 +700,10 @@ class Game {
         const hint = '[S] הגדרות  [P] קבוצה  [D] מפלצופדיה  [C] אוסף';
         const w = ctx.measureText(hint).width;
         ctx.fillText(hint, SCREEN_WIDTH - w - 12, SCREEN_HEIGHT - 12);
+        // Version label
+        ctx.fillStyle = 'rgba(100,110,140,0.4)';
+        ctx.font = `10px ${FONT_MAIN}`;
+        ctx.fillText(GAME_VERSION, 8, SCREEN_HEIGHT - 8);
     }
 }
 
@@ -703,6 +765,8 @@ function buildSaveData(game) {
         },
         settings: { ...game.settings },
         hasStarter: game.state !== GameState.START_SCREEN && game.state !== GameState.CHOOSE_STARTER,
+        caveSpawned: game.gameMap.caveSpawned,
+        caveBossDefeated: game.caveBossDefeated,
     };
 }
 
@@ -750,6 +814,12 @@ function applySaveData(game, data) {
     if (data.settings) {
         Object.assign(game.settings, data.settings);
     }
+
+    // Cave state
+    if (data.caveSpawned) {
+        game.gameMap.spawnCave();
+    }
+    game.caveBossDefeated = !!data.caveBossDefeated;
 
     // If save had a starter, go to overworld
     if (data.hasStarter && game.player.party.length > 0) {

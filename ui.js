@@ -312,6 +312,52 @@ function drawOverworld(ctx, gameMap, player, frameCount, trainers, defeatedTrain
         }
     }
 
+    // Cave entrance decoration (if spawned)
+    if (gameMap.caveSpawned) {
+        const caveCol = CAVE_CONFIG.col;
+        const caveRow = CAVE_CONFIG.row - 1; // sign above door
+        const csx = caveCol * TILE_SIZE - camX;
+        const csy = caveRow * TILE_SIZE - camY;
+        if (csx > -200 && csx < SCREEN_WIDTH + 200 && csy > -200 && csy < SCREEN_HEIGHT + 200) {
+            // Glow around cave door
+            const doorX = caveCol * TILE_SIZE - camX;
+            const doorY = (caveRow + 1) * TILE_SIZE - camY;
+            const glowAlpha = 0.3 + Math.sin(frameCount * 0.05) * 0.15;
+            ctx.fillStyle = `rgba(255,80,20,${glowAlpha})`;
+            ctx.beginPath();
+            ctx.arc(doorX + TILE_SIZE / 2, doorY + TILE_SIZE / 2, TILE_SIZE * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sign
+            ctx.fillStyle = 'rgba(80,20,10,0.92)';
+            ctx.beginPath();
+            ctx.roundRect(csx - 20, csy - 18, TILE_SIZE + 40, 18, 3);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,100,40,0.6)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(csx - 20, csy - 18, TILE_SIZE + 40, 18, 3);
+            ctx.stroke();
+            ctx.fillStyle = '#ff6622';
+            ctx.font = `bold 11px ${FONT_MAIN}`;
+            const ctxt = 'מערת האש';
+            const ctw = ctx.measureText(ctxt).width;
+            ctx.fillText(ctxt, csx + TILE_SIZE / 2 - ctw / 2, csy - 4);
+
+            // Fire particles around cave
+            for (let i = 0; i < 3; i++) {
+                const fx = doorX + TILE_SIZE / 2 + Math.sin(frameCount * 0.07 + i * 2.1) * 20;
+                const fy = doorY - 4 - (frameCount * 0.8 + i * 10) % 30;
+                const fa = 0.6 - ((frameCount * 0.8 + i * 10) % 30) / 30 * 0.6;
+                const fsize = 3 + Math.sin(frameCount * 0.1 + i) * 1.5;
+                ctx.fillStyle = `rgba(255,${100 + i * 40},20,${fa})`;
+                ctx.beginPath();
+                ctx.arc(fx, fy, fsize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
     // NPC trainers
     if (trainers && defeatedTrainers) {
         const trainerSprites = getTrainerSprites();

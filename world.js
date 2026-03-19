@@ -5,6 +5,7 @@
 const _ = TILE_GRASS, G = TILE_TALL_GRASS, P = TILE_PATH, W = TILE_WALL;
 const A = TILE_WATER, B = TILE_BUILDING, D = TILE_DOOR, H = TILE_HEAL;
 const S = TILE_SHOP_DOOR;
+const CV = TILE_CAVE_WALL, CD = TILE_CAVE_DOOR;
 
 const GAME_MAP_DATA = [
 [W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W,W],
@@ -90,11 +91,33 @@ const LEGENDARY_ZONES = [
     { speciesId: 43, level: 25, col: 4,  row: 22, radius: 3 },  // Sylvaron - left side grass
 ];
 
+// Cave boss configuration
+const CAVE_CONFIG = {
+    // Cave entrance location (bottom-right empty area)
+    col: 44, row: 46,
+    // Tiles to place when cave spawns: [row, col, tileId]
+    tiles: [
+        [45, 43, CV], [45, 44, CV], [45, 45, CV],
+        [46, 43, CV], [46, 44, CD], [46, 45, CV],
+    ],
+    bossSpeciesId: 44,
+    bossLevel: 20,
+};
+
 class GameMap {
     constructor() {
-        this.grid = GAME_MAP_DATA;
+        this.grid = GAME_MAP_DATA.map(row => [...row]); // mutable copy
         this.rows = this.grid.length;
         this.cols = this.grid[0].length;
+        this.caveSpawned = false;
+    }
+
+    spawnCave() {
+        if (this.caveSpawned) return;
+        for (const [r, c, tile] of CAVE_CONFIG.tiles) {
+            this.grid[r][c] = tile;
+        }
+        this.caveSpawned = true;
     }
 
     tileAt(col, row) {

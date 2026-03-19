@@ -188,6 +188,7 @@ const MOVE_DB = {
     'Crunch':       new Move('כתיתה',      'DARK',     70, 95),
     // Legendary moves
     'Dragon Blaze': new Move('להבת דרקון',  'FIRE',    100, 85),
+    'Ofek Inferno': new Move('גיהינום של אופק','FIRE',  120, 80),
     'Abyssal Wave': new Move('גל תהומי',    'WATER',   100, 85),
     'Forest Wrath': new Move('זעם היער',     'GRASS',   100, 85),
     'Dark Nova':    new Move('נובה חשוכה',   'DARK',     95, 80),
@@ -456,6 +457,13 @@ const SPECIES_DB = {
         baseHp: 95, baseAttack: 100, baseDefense: 95, baseSpeed: 105,
         learnable: [[1,'Vine Whip'],[1,'Spark'],[1,'Leaf Blade'],[5,'Thunderbolt'],[10,'Solar Beam'],[15,'Forest Wrath'],[20,'Thunder Storm']],
         color: '#20aa40',
+    },
+    // === Cave Boss ===
+    44: {
+        name: 'דרקו אופק', type: 'FIRE', legendary: true,
+        baseHp: 120, baseAttack: 115, baseDefense: 100, baseSpeed: 90,
+        learnable: [[1,'Ember'],[1,'Dragon Blaze'],[1,'Inferno'],[1,'Ofek Inferno']],
+        color: '#ff3300',
     },
 };
 

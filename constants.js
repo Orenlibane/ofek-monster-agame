@@ -2,6 +2,7 @@
  * constants.js - Global constants for the Monster Trainer RPG (Web version).
  */
 
+const GAME_VERSION = 'v1.1.0';
 const TILE_SIZE = 48;
 const SCREEN_WIDTH = 960;
 const SCREEN_HEIGHT = 720;
@@ -50,10 +51,14 @@ const TILE_BUILDING   = 5;
 const TILE_DOOR       = 6;
 const TILE_HEAL       = 7;
 const TILE_SHOP_DOOR  = 8;
+const TILE_CAVE_WALL  = 9;
+const TILE_CAVE_DOOR  = 10;
 
-const IMPASSABLE_TILES = new Set([TILE_WALL, TILE_WATER, TILE_BUILDING]);
+const IMPASSABLE_TILES = new Set([TILE_WALL, TILE_WATER, TILE_BUILDING, TILE_CAVE_WALL]);
 
 const COLOR_SHOP_DOOR = '#66bb66';
+const COLOR_CAVE_WALL = '#4a3a2a';
+const COLOR_CAVE_DOOR = '#2a1a0a';
 
 const TILE_COLOR_MAP = {
     [TILE_GRASS]:      COLOR_GRASS,
@@ -65,6 +70,8 @@ const TILE_COLOR_MAP = {
     [TILE_DOOR]:       COLOR_DOOR,
     [TILE_HEAL]:       COLOR_HEAL_TILE,
     [TILE_SHOP_DOOR]:  COLOR_SHOP_DOOR,
+    [TILE_CAVE_WALL]:  COLOR_CAVE_WALL,
+    [TILE_CAVE_DOOR]:  COLOR_CAVE_DOOR,
 };
 
 const TILE_NAMES = {
@@ -77,6 +84,8 @@ const TILE_NAMES = {
     [TILE_DOOR]:       'door',
     [TILE_HEAL]:       'heal',
     [TILE_SHOP_DOOR]:  'shop',
+    [TILE_CAVE_WALL]:  'cave_wall',
+    [TILE_CAVE_DOOR]:  'cave_door',
 };
 
 // Gameplay
