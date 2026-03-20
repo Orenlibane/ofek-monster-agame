@@ -725,6 +725,304 @@ function drawBattleBackground(ctx, frameCount, isItay) {
     }
 }
 
+// ===================================================================
+// Custom canvas starter sprites (IDs 1, 2, 3)
+// Drawn in the same hand-crafted style as Itay's boss sprite
+// but with lighter animation. cx/cy = body centre, scale = optional.
+// ===================================================================
+
+function _drawStarterCanvasSprite(ctx, speciesId, cx, cy, fc, flashActive, scale) {
+    scale = scale || 1;
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (scale !== 1) ctx.scale(scale, scale);
+    if      (speciesId === 1) _drawBlazeleteCanvas(ctx, fc, flashActive);
+    else if (speciesId === 2) _drawAquaphinCanvas(ctx, fc, flashActive);
+    else if (speciesId === 3) _drawThornixCanvas(ctx, fc, flashActive);
+    ctx.restore();
+}
+
+// ── BLAZELETE (1 · FIRE) ── fire salamander ──────────────────────
+function _drawBlazeleteCanvas(ctx, fc, flashActive) {
+    const tailWave   = Math.sin(fc * 0.08) * 6;
+    const flamePulse = 0.82 + Math.sin(fc * 0.14) * 0.18;
+
+    // Warm aura
+    const aura = ctx.createRadialGradient(0, 10, 12, 0, 10, 56);
+    aura.addColorStop(0, 'rgba(255,120,0,0.10)');
+    aura.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath(); ctx.ellipse(0, 10, 56, 56, 0, 0, Math.PI*2); ctx.fill();
+
+    // ── Tail (drawn behind body) ──
+    ctx.save();
+    ctx.strokeStyle = 'rgb(195,55,0)'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(28, 30);
+    ctx.bezierCurveTo(52, 20+tailWave, 66, tailWave, 63, -14+tailWave*0.6);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgb(235,95,0)'; ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(63, -14+tailWave*0.6);
+    ctx.bezierCurveTo(68, -22+tailWave*0.4, 63, -29, 58, -34+tailWave*0.3);
+    ctx.stroke();
+    ctx.restore();
+
+    // Flame tip (only animated element)
+    const ftx = 58, fty = -34 + tailWave*0.3;
+    const fg = ctx.createRadialGradient(ftx, fty, 0, ftx, fty, 12*flamePulse);
+    fg.addColorStop(0, `rgba(255,235,50,${flamePulse})`);
+    fg.addColorStop(0.5, `rgba(255,130,0,${flamePulse*0.8})`);
+    fg.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(ftx, fty, 12*flamePulse, 0, Math.PI*2); ctx.fill();
+
+    // ── Body ──
+    const bg = ctx.createRadialGradient(-8, 5, 4, 0, 12, 40);
+    bg.addColorStop(0, 'rgb(255,130,38)');
+    bg.addColorStop(0.55, 'rgb(218,68,8)');
+    bg.addColorStop(1, 'rgb(155,34,0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.ellipse(0, 12, 37, 33, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(100,20,0,0.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Belly
+    const bel = ctx.createRadialGradient(0, 18, 0, 0, 18, 23);
+    bel.addColorStop(0, 'rgb(255,215,138)'); bel.addColorStop(1, 'rgba(255,168,88,0)');
+    ctx.fillStyle = bel;
+    ctx.beginPath(); ctx.ellipse(0, 20, 20, 22, 0, 0, Math.PI*2); ctx.fill();
+
+    // ── Legs ──
+    ctx.fillStyle = 'rgb(192,52,6)';
+    ctx.beginPath(); ctx.ellipse(-28, 36, 11, 7, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 28, 36, 11, 7,  0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-20, 48, 13, 8, -0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 20, 48, 13, 8,  0.5, 0, Math.PI*2); ctx.fill();
+
+    // ── Head ──
+    const hg = ctx.createRadialGradient(-6, -24, 4, 0, -20, 27);
+    hg.addColorStop(0, 'rgb(255,140,48)'); hg.addColorStop(1, 'rgb(198,56,4)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.ellipse(0, -20, 25, 23, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(100,20,0,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Horn nubs
+    ctx.fillStyle = 'rgb(152,36,0)';
+    for (const sx of [-13, 13]) {
+        ctx.beginPath();
+        ctx.moveTo(sx-4, -40); ctx.lineTo(sx, -52); ctx.lineTo(sx+4, -40);
+        ctx.closePath(); ctx.fill();
+    }
+
+    // ── Eyes ──
+    ctx.fillStyle = 'rgb(255,250,232)';
+    ctx.beginPath(); ctx.ellipse(-10, -22,  8, 9, -0.1, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 10, -22,  8, 9,  0.1, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgb(24,7,0)';
+    ctx.beginPath(); ctx.ellipse(-10, -21, 5, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 10, -21, 5, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.beginPath(); ctx.arc(-13, -24, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(  7, -24, 2.5, 0, Math.PI*2); ctx.fill();
+
+    // Nostrils
+    ctx.fillStyle = 'rgba(100,20,0,0.45)';
+    ctx.beginPath(); ctx.arc(-5, -12, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 5, -12, 2, 0, Math.PI*2); ctx.fill();
+
+    if (flashActive) {
+        ctx.fillStyle = 'rgba(255,200,100,0.55)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 56, 66, 0, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+// ── AQUAPHIN (2 · WATER) ── cute dolphin ─────────────────────────
+function _drawAquaphinCanvas(ctx, fc, flashActive) {
+    const finWave     = Math.sin(fc * 0.07) * 10;
+    const shimmerA    = 0.07 + Math.sin(fc * 0.10) * 0.04;
+
+    // Cool aura
+    const aura = ctx.createRadialGradient(0, 5, 10, 0, 5, 56);
+    aura.addColorStop(0, 'rgba(40,140,255,0.09)'); aura.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath(); ctx.ellipse(0, 5, 56, 56, 0, 0, Math.PI*2); ctx.fill();
+
+    // ── Tail fin (behind body) ──
+    ctx.fillStyle = 'rgb(28,98,198)';
+    ctx.save(); ctx.translate(0, 52);
+    for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(s*22, 8+s*finWave*0.25, s*30, 18, s*20, 20);
+        ctx.bezierCurveTo(s*10, 22, 0, 10, 0, 0);
+        ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    // ── Dorsal fin (animated tip) ──
+    ctx.fillStyle = 'rgb(24,88,183)';
+    ctx.beginPath();
+    ctx.moveTo(-8, -33);
+    ctx.bezierCurveTo(-16+finWave*0.35, -54, -4+finWave*0.25, -60, 6, -38);
+    ctx.lineTo(0, -33); ctx.closePath(); ctx.fill();
+
+    // ── Body ──
+    const bg = ctx.createRadialGradient(-10, -4, 7, 0, 8, 44);
+    bg.addColorStop(0, 'rgb(78,158,255)');
+    bg.addColorStop(0.55, 'rgb(33,108,214)');
+    bg.addColorStop(1, 'rgb(13,68,158)');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.ellipse(0, 8, 33, 45, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(8,38,118,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Belly
+    const bel = ctx.createRadialGradient(0, 12, 0, 0, 12, 30);
+    bel.addColorStop(0, 'rgb(208,238,255)');
+    bel.addColorStop(0.6, 'rgba(178,218,255,0.7)');
+    bel.addColorStop(1, 'rgba(98,168,255,0)');
+    ctx.fillStyle = bel;
+    ctx.beginPath(); ctx.ellipse(0, 15, 20, 32, 0, 0, Math.PI*2); ctx.fill();
+
+    // Water sparkles (only animated element on body)
+    ctx.fillStyle = `rgba(200,240,255,${shimmerA})`;
+    for (let i = 0; i < 3; i++) {
+        const sy2 = -10 + Math.sin(fc*0.09 + i*1.2) * 14;
+        ctx.beginPath(); ctx.arc(-15+i*15, sy2, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // ── Side fins (gently wave) ──
+    const fa = finWave * 0.015;
+    for (const side of [-1, 1]) {
+        ctx.save();
+        ctx.translate(side*33, 15); ctx.rotate(side*(0.3+fa));
+        ctx.fillStyle = 'rgb(28,98,198)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    // ── Head ──
+    const hg = ctx.createRadialGradient(-6, -38, 4, 0, -35, 28);
+    hg.addColorStop(0, 'rgb(88,168,255)'); hg.addColorStop(1, 'rgb(28,98,208)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.ellipse(0, -35, 26, 22, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(8,38,118,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Snout
+    ctx.fillStyle = 'rgb(23,88,188)';
+    ctx.beginPath(); ctx.ellipse(0, -22, 14, 9, 0, 0, Math.PI*2); ctx.fill();
+
+    // ── Eye ──
+    ctx.fillStyle = 'rgb(238,250,255)';
+    ctx.beginPath(); ctx.ellipse(-12, -38, 9, 10, 0.1, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgb(8,22,78)';
+    ctx.beginPath(); ctx.ellipse(-12, -37, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath(); ctx.arc(-15, -40, 3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(-9, -33, 1.5, 0, Math.PI*2); ctx.fill();
+
+    // Blowhole
+    ctx.fillStyle = 'rgba(14,62,152,0.6)';
+    ctx.beginPath(); ctx.ellipse(5, -50, 4, 2.5, 0.2, 0, Math.PI*2); ctx.fill();
+
+    if (flashActive) {
+        ctx.fillStyle = 'rgba(148,218,255,0.55)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 56, 66, 0, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+// ── THORNIX (3 · GRASS) ── spiky leaf creature ───────────────────
+function _drawThornixCanvas(ctx, fc, flashActive) {
+    const leafPulse = Math.sin(fc * 0.09);
+    const leafG     = Math.floor(158 + leafPulse * 28); // green oscillates
+
+    // Soft green aura
+    const aura = ctx.createRadialGradient(0, 10, 10, 0, 10, 56);
+    aura.addColorStop(0, 'rgba(60,180,60,0.08)'); aura.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath(); ctx.ellipse(0, 10, 56, 56, 0, 0, Math.PI*2); ctx.fill();
+
+    // ── Leaf spikes on back (only animated element: colour shimmer) ──
+    const spikes = [
+        { a: -Math.PI*0.76, len: 28 },
+        { a: -Math.PI*0.61, len: 33 },
+        { a: -Math.PI*0.50, len: 36 },
+        { a: -Math.PI*0.39, len: 33 },
+        { a: -Math.PI*0.24, len: 28 },
+    ];
+    for (let i = 0; i < spikes.length; i++) {
+        const { a, len } = spikes[i];
+        const tipShift = Math.sin(fc*0.09 + i*0.65) * 2.5;
+        const bx = Math.cos(a)*33, by = Math.sin(a)*30 + 12;
+        const tx = bx + Math.cos(a)*len, ty = by + Math.sin(a)*len + tipShift;
+        const lg = Math.floor(leafG + Math.sin(fc*0.09+i*0.6)*20);
+        ctx.strokeStyle = `rgb(28,${Math.min(200,lg)},36)`; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+        ctx.strokeStyle = `rgb(88,${Math.min(240,lg+45)},68)`; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(bx+(tx-bx)*0.5, by+(ty-by)*0.5);
+        ctx.lineTo(tx, ty); ctx.stroke();
+    }
+
+    // ── Body ──
+    const bg = ctx.createRadialGradient(-8, 5, 5, 0, 12, 40);
+    bg.addColorStop(0, 'rgb(88,183,73)');
+    bg.addColorStop(0.55, 'rgb(53,143,43)');
+    bg.addColorStop(1, 'rgb(28,88,23)');
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.ellipse(0, 12, 36, 32, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(18,58,13,0.45)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Belly
+    const bel = ctx.createRadialGradient(0, 18, 0, 0, 18, 24);
+    bel.addColorStop(0, 'rgb(188,238,158)'); bel.addColorStop(1, 'rgba(148,208,118,0)');
+    ctx.fillStyle = bel;
+    ctx.beginPath(); ctx.ellipse(0, 20, 20, 22, 0, 0, Math.PI*2); ctx.fill();
+
+    // ── Legs ──
+    ctx.fillStyle = 'rgb(48,138,38)';
+    ctx.beginPath(); ctx.ellipse(-28, 36, 11, 7, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 28, 36, 11, 7,  0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-20, 48, 13, 8, -0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 20, 48, 13, 8,  0.5, 0, Math.PI*2); ctx.fill();
+
+    // ── Head ──
+    const hg = ctx.createRadialGradient(-6, -22, 4, 0, -20, 27);
+    hg.addColorStop(0, 'rgb(93,188,78)'); hg.addColorStop(1, 'rgb(48,138,38)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.ellipse(0, -20, 25, 23, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(18,58,13,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Ear-leaf nubs (colour-animated too)
+    for (const [ex, flip] of [[-14, -1], [14, 1]]) {
+        ctx.fillStyle = `rgb(28,${Math.min(200,leafG)},36)`;
+        ctx.beginPath();
+        ctx.moveTo(ex, -40); ctx.lineTo(ex+flip*8, -52); ctx.lineTo(ex+flip*4, -38);
+        ctx.closePath(); ctx.fill();
+    }
+
+    // ── Eyes ──
+    ctx.fillStyle = 'rgb(243,255,238)';
+    ctx.beginPath(); ctx.ellipse(-10, -22,  8, 9, -0.1, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 10, -22,  8, 9,  0.1, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgb(13,48,8)';
+    ctx.beginPath(); ctx.ellipse(-10, -21, 5, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( 10, -21, 5, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.beginPath(); ctx.arc(-13, -24, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(  7, -24, 2.5, 0, Math.PI*2); ctx.fill();
+
+    // Nostrils
+    ctx.fillStyle = 'rgba(18,58,13,0.45)';
+    ctx.beginPath(); ctx.arc(-5, -11, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 5, -11, 2, 0, Math.PI*2); ctx.fill();
+
+    if (flashActive) {
+        ctx.fillStyle = 'rgba(148,255,118,0.55)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 56, 66, 0, 0, Math.PI*2); ctx.fill();
+    }
+}
+
 function _drawItayBattleSprite(ctx, cx, cy, fc, flashActive) {
     ctx.save();
 
@@ -950,6 +1248,13 @@ function drawBattleArena(ctx, battle) {
         const cx = platEx + 60 + slideE;
         const cy = platEy - 55 + enemyBob;
         _drawItayBattleSprite(ctx, cx, cy, fc, flashActive);
+    } else if (battle.enemyMon.speciesId <= 3) {
+        // === Custom canvas starter sprite (enemy side) ===
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath(); ctx.ellipse(platEx+60+slideE, platEy+4, 42, 8, 0, 0, Math.PI*2); ctx.fill();
+        _drawStarterCanvasSprite(ctx, battle.enemyMon.speciesId,
+            platEx + 60 + slideE, platEy - 50 + enemyBob, fc, flashActive, 1.0);
     } else {
         const enemySprite = getMonsterBattleSprite(battle.enemyMon.speciesId);
         const ex = platEx + 60 - enemySprite.width / 2 + slideE;
@@ -957,13 +1262,8 @@ function drawBattleArena(ctx, battle) {
         // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.fillRect(ex + 5, platEy - 2, enemySprite.width - 10, 8);
-
-        // Flash effect
         if (flashActive) {
-            ctx.globalAlpha = 0.5;
-            ctx.drawImage(enemySprite, ex, ey);
-            ctx.globalAlpha = 1.0;
-            // White overlay
+            ctx.globalAlpha = 0.5; ctx.drawImage(enemySprite, ex, ey); ctx.globalAlpha = 1.0;
             ctx.fillStyle = 'rgba(255,255,255,0.5)';
             ctx.fillRect(ex, ey, enemySprite.width, enemySprite.height);
         } else {
@@ -976,33 +1276,34 @@ function drawBattleArena(ctx, battle) {
     const platPy = Math.floor(SCREEN_HEIGHT * 0.60);
 
     ctx.fillStyle = 'rgb(50,65,45)';
-    ctx.beginPath();
-    ctx.ellipse(platPx + 70, platPy + 26, 100, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(platPx+70, platPy+26, 100, 18, 0, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = 'rgb(70,90,60)';
-    ctx.beginPath();
-    ctx.ellipse(platPx + 70, platPy + 18, 100, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(platPx+70, platPy+18, 100, 18, 0, 0, Math.PI*2); ctx.fill();
 
-    const playerSprite = getMonsterBattleSprite(battle.playerMon.speciesId);
-    const scaledW = Math.floor(playerSprite.width * 1.4);
-    const scaledH = Math.floor(playerSprite.height * 1.4);
-    const slideP = battle.anim.playerSlide;
-    const ppx = platPx + 70 - scaledW / 2 + slideP;
-    const ppy = platPy - scaledH + 10 + playerBob;
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(ppx + 8, platPy - 2, scaledW - 16, 10);
+    const slideP   = battle.anim.playerSlide;
+    const playerFlash = battle.anim.playerFlash > 0 && battle.anim.playerFlash % 3 < 2;
 
-    // Flash effect
-    if (battle.anim.playerFlash > 0 && battle.anim.playerFlash % 3 < 2) {
-        ctx.globalAlpha = 0.5;
-        ctx.drawImage(playerSprite, ppx, ppy, scaledW, scaledH);
-        ctx.globalAlpha = 1.0;
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.fillRect(ppx, ppy, scaledW, scaledH);
+    if (battle.playerMon.speciesId <= 3) {
+        // === Custom canvas starter sprite (player side, 1.4× scale) ===
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath(); ctx.ellipse(platPx+70+slideP, platPy+2, 55, 10, 0, 0, Math.PI*2); ctx.fill();
+        _drawStarterCanvasSprite(ctx, battle.playerMon.speciesId,
+            platPx + 70 + slideP, platPy - 68 + playerBob, fc, playerFlash, 1.4);
     } else {
-        ctx.drawImage(playerSprite, ppx, ppy, scaledW, scaledH);
+        const playerSprite = getMonsterBattleSprite(battle.playerMon.speciesId);
+        const scaledW = Math.floor(playerSprite.width * 1.4);
+        const scaledH = Math.floor(playerSprite.height * 1.4);
+        const ppx = platPx + 70 - scaledW / 2 + slideP;
+        const ppy = platPy - scaledH + 10 + playerBob;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(ppx + 8, platPy - 2, scaledW - 16, 10);
+        if (playerFlash) {
+            ctx.globalAlpha = 0.5; ctx.drawImage(playerSprite, ppx, ppy, scaledW, scaledH); ctx.globalAlpha = 1.0;
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillRect(ppx, ppy, scaledW, scaledH);
+        } else {
+            ctx.drawImage(playerSprite, ppx, ppy, scaledW, scaledH);
+        }
     }
 }
 
@@ -2471,18 +2772,16 @@ function drawStarterSelection(ctx, cursor, frameCount) {
             ctx.fill();
         }
 
-        // Sprite
-        const sprite = getMonsterBattleSprite(sid);
-        const spriteScale = 1.6;
-        const sw = sprite.width * spriteScale;
-        const sh = sprite.height * spriteScale;
-        const sx = cx + cardW / 2 - sw / 2;
-        const bob = selected ? Math.sin(frameCount * 0.06) * 4 : 0;
-        const sy = cy + 30 + bob;
-        ctx.drawImage(sprite, sx, sy, sw, sh);
+        // Sprite — use live canvas drawing for all 3 starters
+        const bob     = selected ? Math.sin(frameCount * 0.06) * 4 : 0;
+        const sprScale = selected ? 1.0 : 0.88;
+        // Centre of sprite inside card: 30px top-padding + 55 (half of ~110px sprite height)
+        const spriteCX = cx + cardW / 2;
+        const spriteCY = cy + 30 + 58 + bob;
+        _drawStarterCanvasSprite(ctx, sid, spriteCX, spriteCY, frameCount, false, sprScale);
 
-        // Name
-        const nameY = cy + 30 + sh + 20;
+        // Name — fixed position below sprite area (sprite spans ~110px * scale, centred at spriteCY)
+        const nameY = cy + 30 + 118 + 14;
         ctx.fillStyle = selected ? YELLOW : WHITE;
         ctx.font = selected ? `bold 20px ${FONT_MAIN}` : `18px ${FONT_MAIN}`;
         const nameW = ctx.measureText(species.name).width;
