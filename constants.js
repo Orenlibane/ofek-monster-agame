@@ -2,7 +2,7 @@
  * constants.js - Global constants for the Monster Trainer RPG (Web version).
  */
 
-const GAME_VERSION = 'v1.3.0';
+const GAME_VERSION = 'v1.4.0';
 const TILE_SIZE = 48;
 const SCREEN_WIDTH = 960;
 const SCREEN_HEIGHT = 720;

@@ -366,10 +366,17 @@ class Game {
             // Handle save action
             if (optKey === 'save_game') {
                 if (key === 'Enter' || key === 'z' || key === 'Z') {
-                    const ok = saveGame(this);
-                    this._shopMessage = ok ? '!המשחק נשמר בהצלחה' : '!שגיאה בשמירה';
+                    // Show saving indicator immediately; update when done
+                    this._shopMessage = '...שומר';
                     this._shopMsgTimer = 90;
                     this._saveFlash = 30;
+                    saveGame(this).then(() => {
+                        this._shopMessage = '!המשחק נשמר בהצלחה';
+                        this._shopMsgTimer = 90;
+                    }).catch(() => {
+                        this._shopMessage = '!שגיאה בשמירה';
+                        this._shopMsgTimer = 90;
+                    });
                 }
                 return;
             }
@@ -1013,33 +1020,65 @@ function applySaveData(game, data) {
     return true;
 }
 
-function saveGame(game) {
+// ===================================================================
+// Save / Load  — PostgreSQL (via /api/*) + localStorage fallback
+// ===================================================================
+
+async function saveGame(game) {
     if (!game._currentUser) return false;
-    const key = 'monster_save_' + game._currentUser;
     const data = buildSaveData(game);
+
+    // 1. Always write to localStorage immediately (offline backup)
     try {
-        localStorage.setItem(key, JSON.stringify(data));
-        return true;
-    } catch (e) {
-        return false;
-    }
+        localStorage.setItem('monster_save_' + game._currentUser, JSON.stringify(data));
+    } catch (_) {}
+
+    // 2. Push to server (fire-and-forget — errors are silent)
+    try {
+        await fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: game._currentUser, data }),
+        });
+    } catch (_) {}
+
+    return true;
 }
 
-function loadGame(game, username) {
-    const key = 'monster_save_' + username;
+async function loadGame(game, username) {
+    // 1. Try server first
     try {
-        const raw = localStorage.getItem(key);
+        const res  = await fetch(`/api/load/${encodeURIComponent(username)}`);
+        const json = await res.json();
+        if (json.found && json.data) {
+            // Cache locally so offline fallback stays fresh
+            try {
+                localStorage.setItem('monster_save_' + username, JSON.stringify(json.data));
+            } catch (_) {}
+            return applySaveData(game, json.data);
+        }
+    } catch (_) {}
+
+    // 2. Fall back to localStorage
+    try {
+        const raw = localStorage.getItem('monster_save_' + username);
         if (!raw) return false;
-        const data = JSON.parse(raw);
-        return applySaveData(game, data);
-    } catch (e) {
+        return applySaveData(game, JSON.parse(raw));
+    } catch (_) {
         return false;
     }
 }
 
-function hasSaveData(username) {
-    const key = 'monster_save_' + username;
-    return localStorage.getItem(key) !== null;
+async function hasSaveData(username) {
+    // 1. Try server
+    try {
+        const res  = await fetch(`/api/has-save/${encodeURIComponent(username)}`);
+        const json = await res.json();
+        return !!json.exists;
+    } catch (_) {}
+
+    // 2. Fall back to localStorage
+    return localStorage.getItem('monster_save_' + username) !== null;
 }
 
 // ===================================================================
@@ -1055,18 +1094,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let gameInstance = null;
 
-    function startGame(username) {
+    async function startGame(username) {
         overlay.classList.add('hidden');
         gameInstance = new Game(canvas);
         gameInstance._currentUser = username;
 
-        const loaded = loadGame(gameInstance, username);
+        const loaded = await loadGame(gameInstance, username);
         if (loaded) {
             loginMsg.textContent = '';
         }
     }
 
-    function doLogin() {
+    async function doLogin() {
         const username = loginInput.value.trim();
         if (!username) {
             loginMsg.className = 'login-msg error';
@@ -1079,10 +1118,17 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Save username to remember last login
+        // Remember last login
         localStorage.setItem('monster_last_user', username);
 
-        if (hasSaveData(username)) {
+        // Disable button while checking
+        loginBtn.disabled = true;
+        loginMsg.className = 'login-msg';
+        loginMsg.textContent = '...מתחבר';
+
+        const exists = await hasSaveData(username);
+
+        if (exists) {
             loginMsg.className = 'login-msg success';
             loginMsg.textContent = '...טוען משחק שמור';
             setTimeout(() => startGame(username), 400);
@@ -1091,6 +1137,7 @@ window.addEventListener('DOMContentLoaded', () => {
             loginMsg.textContent = '...!שחקן חדש, בהצלחה';
             setTimeout(() => startGame(username), 400);
         }
+        loginBtn.disabled = false;
     }
 
     loginBtn.addEventListener('click', doLogin);
