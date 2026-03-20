@@ -560,6 +560,19 @@ function drawHud(ctx, player) {
     const coinText = `${player.coins}`;
     const coinW = ctx.measureText(coinText).width;
     ctx.fillText(`\u{1FA99} ${coinText}`, hudW - coinW - 30, 60);
+
+    // Version badge — top-right corner of screen
+    const verText = typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : '';
+    if (verText) {
+        ctx.font = `10px ${FONT_MAIN}`;
+        const verW = ctx.measureText(verText).width;
+        const vbx = SCREEN_WIDTH - verW - 18, vby = 5;
+        ctx.fillStyle = 'rgba(10,12,35,0.78)';
+        ctx.beginPath(); ctx.roundRect(vbx - 5, vby, verW + 10, 16, 4); ctx.fill();
+        ctx.strokeStyle = 'rgba(100,120,200,0.32)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = 'rgba(160,170,220,0.72)';
+        ctx.fillText(verText, vbx, vby + 11);
+    }
 }
 
 // ===================================================================
@@ -2953,6 +2966,15 @@ function drawSettingsScreen(ctx, settings, cursor) {
         }
 
         oy += 52;
+    }
+
+    // Version string — bottom-right of panel
+    const verLabel = typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : '';
+    if (verLabel) {
+        ctx.font = `11px ${FONT_MAIN}`;
+        const vw = ctx.measureText(verLabel).width;
+        ctx.fillStyle = 'rgba(120,130,180,0.55)';
+        ctx.fillText(verLabel, px + pw - vw - 18, py + ph - 18);
     }
 
     // Close hint
