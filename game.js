@@ -607,7 +607,7 @@ class Game {
         const subAlpha = 0.4 + 0.5 * Math.sin(fc * 0.06);
         ctx.fillStyle = `rgba(220,225,255,${subAlpha})`;
         ctx.font = `16px ${FONT_MAIN}`;
-        const sub = 'לחץ ENTER כדי להתחיל';
+        const sub = window.isTouchDevice ? 'לחץ OK כדי להתחיל' : 'לחץ ENTER כדי להתחיל';
         const subW = ctx.measureText(sub).width;
         ctx.fillText(sub, SCREEN_WIDTH / 2 - subW / 2, SCREEN_HEIGHT / 3 + 55);
 
@@ -620,8 +620,13 @@ class Game {
         ctx.lineTo(SCREEN_WIDTH / 2 + 200, SCREEN_HEIGHT / 2 + 15);
         ctx.stroke();
 
-        // Info lines
-        const infoLines = [
+        // Info lines - adapt for touch vs keyboard
+        const infoLines = window.isTouchDevice ? [
+            'השתמש בכפתורי המגע למטה כדי לשחק',
+            'היכנס לדלת (צהוב): תחנת ריפוי',
+            '!לך דרך הדשא הכהה כדי לפגוש מפלצות פראיות',
+            'OK לחץ על כפתור',
+        ] : [
             'ESC: ביטול    Enter/Z: אישור    חצים: תנועה',
             'S: הגדרות   P: קבוצה   D: מפלצופדיה   C: אוסף',
             'היכנס לדלת (צהוב): תחנת ריפוי',
@@ -695,11 +700,14 @@ class Game {
 
     _renderControlsHint() {
         const ctx = this.ctx;
-        ctx.fillStyle = 'rgba(130,140,170,0.5)';
-        ctx.font = `11px ${FONT_MAIN}`;
-        const hint = '[S] הגדרות  [P] קבוצה  [D] מפלצופדיה  [C] אוסף';
-        const w = ctx.measureText(hint).width;
-        ctx.fillText(hint, SCREEN_WIDTH - w - 12, SCREEN_HEIGHT - 12);
+        // Hide keyboard hints on touch devices (buttons are on screen)
+        if (!window.isTouchDevice) {
+            ctx.fillStyle = 'rgba(130,140,170,0.5)';
+            ctx.font = `11px ${FONT_MAIN}`;
+            const hint = '[S] הגדרות  [P] קבוצה  [D] מפלצופדיה  [C] אוסף';
+            const w = ctx.measureText(hint).width;
+            ctx.fillText(hint, SCREEN_WIDTH - w - 12, SCREEN_HEIGHT - 12);
+        }
         // Version label
         ctx.fillStyle = 'rgba(100,110,140,0.4)';
         ctx.font = `10px ${FONT_MAIN}`;

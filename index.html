@@ -2,7 +2,11 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a12">
     <title>מאלף המפלצות של אופק</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
@@ -75,94 +79,98 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 200px;
             pointer-events: none;
             z-index: 100;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
         .dpad {
             position: absolute;
-            left: 20px;
-            bottom: 20px;
-            width: 150px;
-            height: 150px;
+            left: 16px;
+            bottom: 16px;
+            width: 180px;
+            height: 180px;
             pointer-events: auto;
         }
         .dpad-btn {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.12);
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 22px;
-            color: rgba(255,255,255,0.6);
+            font-size: 26px;
+            color: rgba(255,255,255,0.7);
             -webkit-tap-highlight-color: transparent;
-            transition: background 0.1s;
+            transition: background 0.08s;
         }
-        .dpad-btn:active {
-            background: rgba(255,255,255,0.3);
+        .dpad-btn.active, .dpad-btn:active {
+            background: rgba(255,255,255,0.35);
+            border-color: rgba(255,255,255,0.5);
         }
-        .dpad-up    { top: 0;   left: 50px; }
-        .dpad-down  { bottom: 0; left: 50px; }
-        .dpad-left  { top: 50px; left: 0; }
-        .dpad-right { top: 50px; right: 0; }
+        .dpad-up    { top: 0;   left: 60px; }
+        .dpad-down  { bottom: 0; left: 60px; }
+        .dpad-left  { top: 60px; left: 0; }
+        .dpad-right { top: 60px; right: 0; }
 
         .action-btns {
             position: absolute;
-            right: 20px;
-            bottom: 20px;
+            right: 16px;
+            bottom: 16px;
             display: flex;
-            gap: 12px;
+            gap: 14px;
             pointer-events: auto;
         }
         .action-btn {
-            width: 56px;
-            height: 56px;
+            width: 66px;
+            height: 66px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.12);
-            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
+            border: 2.5px solid rgba(255,255,255,0.25);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: bold;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255,255,255,0.8);
             -webkit-tap-highlight-color: transparent;
-            transition: background 0.1s;
+            transition: background 0.08s;
         }
-        .action-btn:active {
-            background: rgba(255,255,255,0.3);
+        .action-btn.active, .action-btn:active {
+            background: rgba(255,255,255,0.35);
         }
-        .btn-confirm { border-color: rgba(100,200,100,0.4); color: rgba(100,220,100,0.8); }
-        .btn-cancel  { border-color: rgba(200,100,100,0.4); color: rgba(220,100,100,0.8); }
+        .btn-confirm { border-color: rgba(100,200,100,0.5); color: rgba(100,220,100,0.9); }
+        .btn-cancel  { border-color: rgba(200,100,100,0.5); color: rgba(220,100,100,0.9); }
 
         .top-btns {
             position: absolute;
-            right: 20px;
-            bottom: 100px;
+            right: 16px;
+            bottom: 110px;
             display: flex;
-            gap: 8px;
+            gap: 10px;
             pointer-events: auto;
         }
         .top-btn {
-            width: 44px;
-            height: 36px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.15);
+            min-width: 52px;
+            padding: 0 10px;
+            height: 42px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.2);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 11px;
-            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+            font-weight: bold;
+            color: rgba(255,255,255,0.6);
             -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
-        .top-btn:active {
-            background: rgba(255,255,255,0.2);
+        .top-btn.active, .top-btn:active {
+            background: rgba(255,255,255,0.25);
         }
 
         /* Login overlay */
@@ -175,28 +183,30 @@
             align-items: center;
             z-index: 200;
             flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
         }
         #loginOverlay.hidden { display: none; }
         .login-box {
             background: rgba(15,15,35,0.95);
             border: 2px solid rgba(100,120,200,0.4);
             border-radius: 16px;
-            padding: 40px 48px;
+            padding: 32px 28px;
             text-align: center;
             box-shadow: 0 0 60px rgba(60,80,180,0.2), 0 0 120px rgba(40,20,100,0.1);
             max-width: 400px;
-            width: 90%;
+            width: 100%;
         }
         .login-title {
             color: #ffd232;
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 900;
             margin-bottom: 8px;
         }
         .login-subtitle {
             color: rgba(180,190,220,0.7);
             font-size: 14px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
         .login-input {
             width: 100%;
@@ -213,6 +223,8 @@
             direction: rtl;
             -webkit-user-select: text;
             user-select: text;
+            -webkit-appearance: none;
+            appearance: none;
         }
         .login-input:focus {
             border-color: rgba(140,160,255,0.6);
@@ -223,7 +235,7 @@
         }
         .login-btn {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             font-size: 18px;
             font-weight: 700;
             font-family: 'Heebo', sans-serif;
@@ -236,6 +248,8 @@
             margin-top: 12px;
             -webkit-user-select: none;
             user-select: none;
+            -webkit-appearance: none;
+            appearance: none;
         }
         .login-btn:hover {
             background: linear-gradient(135deg, rgba(80,100,200,0.9), rgba(100,80,180,0.9));
@@ -260,12 +274,31 @@
                 display: block;
             }
             #gameWrapper {
-                height: calc(100% - 180px);
+                height: calc(100dvh - 220px);
                 padding: 4px;
+            }
+            body {
+                height: 100dvh;
             }
         }
 
-        /* Small screens */
+        /* Small portrait phones */
+        @media (max-width: 420px) and (hover: none) and (pointer: coarse) {
+            .dpad { left: 10px; bottom: 12px; width: 160px; height: 160px; }
+            .dpad-btn { width: 52px; height: 52px; font-size: 22px; }
+            .dpad-up    { left: 54px; }
+            .dpad-down  { left: 54px; }
+            .dpad-left  { top: 54px; }
+            .dpad-right { top: 54px; }
+            .action-btns { right: 10px; bottom: 12px; gap: 10px; }
+            .action-btn { width: 58px; height: 58px; font-size: 14px; }
+            .top-btns { right: 10px; bottom: 95px; gap: 8px; }
+            .top-btn { width: 46px; height: 38px; font-size: 12px; }
+            .login-title { font-size: 22px; }
+            .login-box { padding: 24px 20px; }
+        }
+
+        /* Small screens general */
         @media (max-width: 600px) {
             #gameCanvas {
                 border-radius: 6px;
@@ -274,22 +307,34 @@
         }
 
         /* Landscape on mobile */
-        @media (max-height: 500px) and (hover: none) {
+        @media (max-height: 500px) and (hover: none) and (pointer: coarse) {
             #mobileControls {
-                height: 140px;
+                /* Controls overlay the canvas in landscape */
             }
-            .dpad { width: 120px; height: 120px; bottom: 10px; left: 10px; }
-            .dpad-btn { width: 40px; height: 40px; font-size: 18px; }
-            .dpad-up    { left: 40px; }
-            .dpad-down  { left: 40px; }
-            .dpad-right { right: 0; top: 40px; }
-            .dpad-left  { top: 40px; }
-            .action-btns { right: 10px; bottom: 10px; }
-            .action-btn { width: 46px; height: 46px; font-size: 12px; }
-            .top-btns { right: 10px; bottom: 75px; }
-            .top-btn { width: 36px; height: 30px; font-size: 10px; }
             #gameWrapper {
-                height: calc(100% - 130px);
+                height: 100dvh;
+                padding: 4px;
+            }
+            .dpad { width: 130px; height: 130px; bottom: 8px; left: 8px; }
+            .dpad-btn { width: 42px; height: 42px; font-size: 18px; border-radius: 10px; }
+            .dpad-up    { left: 44px; }
+            .dpad-down  { left: 44px; }
+            .dpad-right { right: 0; top: 44px; }
+            .dpad-left  { top: 44px; }
+            .action-btns { right: 8px; bottom: 8px; gap: 10px; }
+            .action-btn { width: 50px; height: 50px; font-size: 13px; }
+            .top-btns { right: 8px; bottom: 72px; gap: 6px; }
+            .top-btn { width: 40px; height: 32px; font-size: 10px; }
+            .login-box { padding: 20px 16px; }
+            .login-title { font-size: 20px; }
+            .login-input { padding: 10px 12px; font-size: 16px; }
+            .login-btn { padding: 10px; font-size: 16px; }
+        }
+
+        /* Handle iOS notch / safe areas */
+        @supports (padding: env(safe-area-inset-bottom)) {
+            #mobileControls {
+                padding-bottom: env(safe-area-inset-bottom);
             }
         }
     </style>
@@ -319,13 +364,13 @@
             <div class="dpad-btn dpad-right" data-key="ArrowRight">&#9654;</div>
         </div>
         <div class="top-btns">
-            <div class="top-btn" data-key="p">P</div>
-            <div class="top-btn" data-key="s">S</div>
-            <div class="top-btn" data-key="d">D</div>
-            <div class="top-btn" data-key="c">C</div>
+            <div class="top-btn" data-key="p">קבוצה</div>
+            <div class="top-btn" data-key="s">הגדרות</div>
+            <div class="top-btn" data-key="d">אינדקס</div>
+            <div class="top-btn" data-key="c">אוסף</div>
         </div>
         <div class="action-btns">
-            <div class="action-btn btn-cancel" data-key="Escape">ESC</div>
+            <div class="action-btn btn-cancel" data-key="Escape">חזור</div>
             <div class="action-btn btn-confirm" data-key="z">OK</div>
         </div>
     </div>
@@ -342,6 +387,9 @@
     <script src="game.js"></script>
 
     <script>
+    // Detect touch device
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     // Responsive canvas sizing
     function resizeCanvas() {
         const canvas = document.getElementById('gameCanvas');
@@ -365,29 +413,132 @@
     }
 
     window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 100);
+        setTimeout(resizeCanvas, 300);
+    });
     window.addEventListener('DOMContentLoaded', () => {
         resizeCanvas();
-        // Re-check after fonts load
         setTimeout(resizeCanvas, 200);
+        setTimeout(resizeCanvas, 600);
     });
 
-    // Mobile touch controls
-    document.querySelectorAll('[data-key]').forEach(btn => {
-        function fireKey(key) {
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true }));
+    // =====================================================
+    // Mobile touch controls with HOLD-TO-REPEAT for D-pad
+    // =====================================================
+    const DPAD_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+    const REPEAT_INITIAL_DELAY = 180; // ms before repeat starts
+    const REPEAT_INTERVAL = 120;      // ms between repeats
+
+    // Track active holds per button
+    const activeHolds = new Map(); // btn element -> { interval, timeout }
+
+    function fireKey(key) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true }));
+    }
+
+    function startHold(btn, key) {
+        // Prevent duplicate holds
+        stopHold(btn);
+        btn.classList.add('active');
+
+        // Fire immediately
+        fireKey(key);
+
+        if (DPAD_KEYS.has(key)) {
+            // Start repeat after initial delay
+            const timeout = setTimeout(() => {
+                const interval = setInterval(() => {
+                    fireKey(key);
+                }, REPEAT_INTERVAL);
+                activeHolds.set(btn, { interval, timeout: null });
+            }, REPEAT_INITIAL_DELAY);
+            activeHolds.set(btn, { interval: null, timeout });
         }
+    }
+
+    function stopHold(btn) {
+        btn.classList.remove('active');
+        const hold = activeHolds.get(btn);
+        if (hold) {
+            if (hold.timeout) clearTimeout(hold.timeout);
+            if (hold.interval) clearInterval(hold.interval);
+            activeHolds.delete(btn);
+        }
+    }
+
+    document.querySelectorAll('[data-key]').forEach(btn => {
+        const key = btn.dataset.key;
+
+        // Touch events
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            fireKey(btn.dataset.key);
+            e.stopPropagation();
+            startHold(btn, key);
         }, { passive: false });
+
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopHold(btn);
+        }, { passive: false });
+
+        btn.addEventListener('touchcancel', (e) => {
+            stopHold(btn);
+        });
+
+        // Handle finger sliding off the button
+        btn.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = btn.getBoundingClientRect();
+            // Check if touch moved outside button bounds (with some tolerance)
+            const tolerance = 15;
+            if (touch.clientX < rect.left - tolerance || touch.clientX > rect.right + tolerance ||
+                touch.clientY < rect.top - tolerance || touch.clientY > rect.bottom + tolerance) {
+                stopHold(btn);
+            }
+        }, { passive: false });
+
+        // Mouse fallback (for testing on desktop)
         btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            fireKey(btn.dataset.key);
+            startHold(btn, key);
         });
     });
 
-    // Prevent pull-to-refresh on mobile
-    document.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+    // Global mouseup / touchend to catch releases outside buttons
+    document.addEventListener('mouseup', () => {
+        activeHolds.forEach((hold, btn) => stopHold(btn));
+    });
+
+    // Prevent pull-to-refresh and bounce scrolling on mobile
+    document.addEventListener('touchmove', (e) => {
+        // Allow scrolling only in the login overlay when it's visible
+        const loginOverlay = document.getElementById('loginOverlay');
+        if (loginOverlay && !loginOverlay.classList.contains('hidden')) {
+            return; // allow scroll on login screen
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    // Prevent double-tap zoom on mobile
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+
+    // Prevent iOS Safari bounce effect
+    document.body.addEventListener('touchmove', (e) => {
+        if (e.target.closest('#loginOverlay')) return;
+        e.preventDefault();
+    }, { passive: false });
+
+    // Make window.isTouchDevice available for game code
+    window.isTouchDevice = isTouchDevice;
     </script>
 </body>
 </html>
