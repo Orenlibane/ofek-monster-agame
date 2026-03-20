@@ -573,7 +573,7 @@ function drawBattle(ctx, battle) {
     ctx.save();
     ctx.translate(shakeX, shakeY);
 
-    drawBattleBackground(ctx, battle.anim.frameCount);
+    drawBattleBackground(ctx, battle.anim.frameCount, battle.isItayBattle);
     drawBattleArena(ctx, battle);
     drawEnemyInfoPanel(ctx, battle);
     drawPlayerInfoPanel(ctx, battle);
@@ -598,56 +598,314 @@ function drawBattle(ctx, battle) {
     ctx.restore();
 }
 
-function drawBattleBackground(ctx, frameCount) {
+function drawBattleBackground(ctx, frameCount, isItay) {
     const skyH = Math.floor(SCREEN_HEIGHT * 0.55);
 
-    // Sky gradient (using canvas gradient - much faster than line-by-line)
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
-    skyGrad.addColorStop(0, 'rgb(15,12,45)');
-    skyGrad.addColorStop(0.4, 'rgb(30,28,70)');
-    skyGrad.addColorStop(0.7, 'rgb(50,55,100)');
-    skyGrad.addColorStop(1, 'rgb(65,75,110)');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, SCREEN_WIDTH, skyH);
+    if (isItay) {
+        // === ITAY BOSS: dark void sky ===
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
+        skyGrad.addColorStop(0, 'rgb(4,0,12)');
+        skyGrad.addColorStop(0.4, 'rgb(12,0,30)');
+        skyGrad.addColorStop(0.7, 'rgb(30,0,50)');
+        skyGrad.addColorStop(1, 'rgb(45,5,60)');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, SCREEN_WIDTH, skyH);
 
-    // Subtle animated stars in sky
-    for (let i = 0; i < 20; i++) {
-        const sx = (i * 137 + frameCount * 0.05) % SCREEN_WIDTH;
-        const sy = (i * 67) % (skyH - 20) + 10;
-        const brightness = 0.15 + Math.sin(frameCount * 0.04 + i * 3) * 0.1;
-        ctx.fillStyle = `rgba(200,210,255,${brightness})`;
+        // Pulsing purple nebula clouds
+        for (let i = 0; i < 5; i++) {
+            const cx = (i * 193 + frameCount * 0.12) % SCREEN_WIDTH;
+            const cy = 30 + (i * 61) % (skyH - 60);
+            const pulse = 0.06 + Math.sin(frameCount * 0.03 + i * 1.5) * 0.04;
+            const r = ctx.createRadialGradient(cx, cy, 0, cx, cy, 90 + i * 20);
+            r.addColorStop(0, `rgba(120,0,180,${pulse})`);
+            r.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = r;
+            ctx.fillRect(0, 0, SCREEN_WIDTH, skyH);
+        }
+
+        // Red/purple animated lightning cracks
+        ctx.save();
+        const lc = Math.floor(frameCount / 22) % 5;
+        if (lc < 3) {
+            ctx.strokeStyle = `rgba(200,50,255,${0.5 + lc * 0.1})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            const lx = 120 + lc * 200;
+            ctx.moveTo(lx, 0);
+            ctx.lineTo(lx + 15, 40);
+            ctx.lineTo(lx + 5, 70);
+            ctx.lineTo(lx + 22, 110);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Dark cracked ground
+        const groundGrad = ctx.createLinearGradient(0, skyH, 0, SCREEN_HEIGHT);
+        groundGrad.addColorStop(0, 'rgb(20,5,30)');
+        groundGrad.addColorStop(0.3, 'rgb(15,3,22)');
+        groundGrad.addColorStop(1, 'rgb(8,0,12)');
+        ctx.fillStyle = groundGrad;
+        ctx.fillRect(0, skyH, SCREEN_WIDTH, SCREEN_HEIGHT - skyH);
+
+        // Ground cracks / lava glow lines
+        for (let i = 0; i < 5; i++) {
+            const gy = skyH + 15 + i * 38;
+            const glowPulse = 0.08 + Math.sin(frameCount * 0.05 + i * 0.8) * 0.05;
+            ctx.strokeStyle = `rgba(160,0,80,${glowPulse})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, gy);
+            ctx.lineTo(SCREEN_WIDTH, gy);
+            ctx.stroke();
+        }
+
+        // Dark purple horizon glow
+        const horizonGrad = ctx.createLinearGradient(0, skyH - 20, 0, skyH + 20);
+        horizonGrad.addColorStop(0, 'rgba(100,0,150,0)');
+        horizonGrad.addColorStop(0.5, 'rgba(120,0,160,0.4)');
+        horizonGrad.addColorStop(1, 'rgba(100,0,150,0)');
+        ctx.fillStyle = horizonGrad;
+        ctx.fillRect(0, skyH - 20, SCREEN_WIDTH, 40);
+
+        // Dark vignette overlay
+        const vig = ctx.createRadialGradient(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 200, SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 600);
+        vig.addColorStop(0, 'rgba(0,0,0,0)');
+        vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    } else {
+        // === NORMAL BATTLE BACKGROUND ===
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
+        skyGrad.addColorStop(0, 'rgb(15,12,45)');
+        skyGrad.addColorStop(0.4, 'rgb(30,28,70)');
+        skyGrad.addColorStop(0.7, 'rgb(50,55,100)');
+        skyGrad.addColorStop(1, 'rgb(65,75,110)');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, SCREEN_WIDTH, skyH);
+
+        // Subtle animated stars in sky
+        for (let i = 0; i < 20; i++) {
+            const sx = (i * 137 + frameCount * 0.05) % SCREEN_WIDTH;
+            const sy = (i * 67) % (skyH - 20) + 10;
+            const brightness = 0.15 + Math.sin(frameCount * 0.04 + i * 3) * 0.1;
+            ctx.fillStyle = `rgba(200,210,255,${brightness})`;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ground gradient
+        const groundGrad = ctx.createLinearGradient(0, skyH, 0, SCREEN_HEIGHT);
+        groundGrad.addColorStop(0, 'rgb(55,70,50)');
+        groundGrad.addColorStop(0.3, 'rgb(45,60,40)');
+        groundGrad.addColorStop(1, 'rgb(30,42,28)');
+        ctx.fillStyle = groundGrad;
+        ctx.fillRect(0, skyH, SCREEN_WIDTH, SCREEN_HEIGHT - skyH);
+
+        // Horizon glow
+        const horizonGrad = ctx.createLinearGradient(0, skyH - 15, 0, skyH + 15);
+        horizonGrad.addColorStop(0, 'rgba(120,140,100,0)');
+        horizonGrad.addColorStop(0.5, 'rgba(120,140,100,0.3)');
+        horizonGrad.addColorStop(1, 'rgba(120,140,100,0)');
+        ctx.fillStyle = horizonGrad;
+        ctx.fillRect(0, skyH - 15, SCREEN_WIDTH, 30);
+
+        // Ground grid lines (perspective feel)
+        for (let i = 0; i < 6; i++) {
+            const gy = skyH + 20 + i * 40;
+            const alpha = Math.max(0.03, (0.18 - i * 0.03));
+            ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, gy);
+            ctx.lineTo(SCREEN_WIDTH, gy);
+            ctx.stroke();
+        }
+    }
+}
+
+function _drawItayBattleSprite(ctx, cx, cy, fc, flashActive) {
+    ctx.save();
+
+    const R = 72; // body radius
+    const pulse = Math.sin(fc * 0.06) * 0.12; // pulsing scale
+    const scale = 1 + pulse;
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    // === Outer aura rings ===
+    for (let ring = 3; ring >= 1; ring--) {
+        const auraAlpha = (0.06 + Math.sin(fc * 0.04 + ring) * 0.03) / ring;
+        const auraR = ctx.createRadialGradient(0, 0, R * ring * 0.5, 0, 0, R * ring);
+        auraR.addColorStop(0, `rgba(160,0,220,${auraAlpha * 2})`);
+        auraR.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = auraR;
         ctx.beginPath();
-        ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+        ctx.arc(0, 0, R * ring, 0, Math.PI * 2);
         ctx.fill();
     }
 
-    // Ground gradient
-    const groundGrad = ctx.createLinearGradient(0, skyH, 0, SCREEN_HEIGHT);
-    groundGrad.addColorStop(0, 'rgb(55,70,50)');
-    groundGrad.addColorStop(0.3, 'rgb(45,60,40)');
-    groundGrad.addColorStop(1, 'rgb(30,42,28)');
-    ctx.fillStyle = groundGrad;
-    ctx.fillRect(0, skyH, SCREEN_WIDTH, SCREEN_HEIGHT - skyH);
-
-    // Horizon glow
-    const horizonGrad = ctx.createLinearGradient(0, skyH - 15, 0, skyH + 15);
-    horizonGrad.addColorStop(0, 'rgba(120,140,100,0)');
-    horizonGrad.addColorStop(0.5, 'rgba(120,140,100,0.3)');
-    horizonGrad.addColorStop(1, 'rgba(120,140,100,0)');
-    ctx.fillStyle = horizonGrad;
-    ctx.fillRect(0, skyH - 15, SCREEN_WIDTH, 30);
-
-    // Ground grid lines (perspective feel)
-    for (let i = 0; i < 6; i++) {
-        const gy = skyH + 20 + i * 40;
-        const alpha = Math.max(0.03, (0.18 - i * 0.03));
-        ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
-        ctx.lineWidth = 1;
+    // === Dark tendrils (8 squiggly arms) ===
+    ctx.save();
+    for (let t = 0; t < 8; t++) {
+        const angle = (t / 8) * Math.PI * 2 + fc * 0.02;
+        const wriggle = Math.sin(fc * 0.08 + t * 0.9) * 12;
+        ctx.strokeStyle = `rgba(80,0,120,0.7)`;
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.moveTo(0, gy);
-        ctx.lineTo(SCREEN_WIDTH, gy);
+        ctx.moveTo(Math.cos(angle) * (R - 10), Math.sin(angle) * (R - 10));
+        ctx.bezierCurveTo(
+            Math.cos(angle + 0.3) * (R + 30) + wriggle,
+            Math.sin(angle + 0.3) * (R + 30) + wriggle,
+            Math.cos(angle - 0.3) * (R + 55),
+            Math.sin(angle - 0.3) * (R + 55),
+            Math.cos(angle) * (R + 75),
+            Math.sin(angle) * (R + 75)
+        );
         ctx.stroke();
     }
+    ctx.restore();
+
+    // === Spikes (7 triangular spikes around body) ===
+    ctx.save();
+    for (let s = 0; s < 7; s++) {
+        const sa = (s / 7) * Math.PI * 2 + Math.PI / 14;
+        const spikePulse = R + 22 + Math.sin(fc * 0.07 + s * 0.8) * 4;
+        ctx.fillStyle = 'rgb(60,0,90)';
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(sa - 0.2) * (R - 5), Math.sin(sa - 0.2) * (R - 5));
+        ctx.lineTo(Math.cos(sa) * spikePulse, Math.sin(sa) * spikePulse);
+        ctx.lineTo(Math.cos(sa + 0.2) * (R - 5), Math.sin(sa + 0.2) * (R - 5));
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // === Body ===
+    const bodyGrad = ctx.createRadialGradient(-15, -20, 10, 0, 0, R);
+    bodyGrad.addColorStop(0, 'rgb(60,0,100)');
+    bodyGrad.addColorStop(0.5, 'rgb(30,0,60)');
+    bodyGrad.addColorStop(1, 'rgb(10,0,20)');
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body rim glow
+    const rimGlow = 0.4 + Math.sin(fc * 0.06) * 0.2;
+    ctx.strokeStyle = `rgba(180,0,255,${rimGlow})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // === Central eye (large cyclops) ===
+    const eyeY = -8;
+    // Eye white (glowing)
+    const eyeGlow = ctx.createRadialGradient(0, eyeY, 0, 0, eyeY, 24);
+    eyeGlow.addColorStop(0, 'rgb(255,200,255)');
+    eyeGlow.addColorStop(0.4, 'rgb(220,100,255)');
+    eyeGlow.addColorStop(1, 'rgb(80,0,120)');
+    ctx.fillStyle = eyeGlow;
+    ctx.beginPath();
+    ctx.ellipse(0, eyeY, 24, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Vertical slit pupil
+    ctx.fillStyle = 'rgb(5,0,10)';
+    ctx.beginPath();
+    ctx.ellipse(0, eyeY, 6, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pupil glow (red)
+    const pupilGlow = ctx.createRadialGradient(0, eyeY, 0, 0, eyeY, 8);
+    pupilGlow.addColorStop(0, 'rgba(255,50,50,0.9)');
+    pupilGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = pupilGlow;
+    ctx.beginPath();
+    ctx.ellipse(0, eyeY, 8, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === Two small side eyes ===
+    for (let se = -1; se <= 1; se += 2) {
+        const sex = se * 38, sey = 5;
+        const seyGlow = ctx.createRadialGradient(sex, sey, 0, sex, sey, 9);
+        seyGlow.addColorStop(0, 'rgb(255,120,0)');
+        seyGlow.addColorStop(0.5, 'rgb(200,50,0)');
+        seyGlow.addColorStop(1, 'rgb(60,0,0)');
+        ctx.fillStyle = seyGlow;
+        ctx.beginPath();
+        ctx.ellipse(sex, sey, 9, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // small dark pupil
+        ctx.fillStyle = 'rgb(5,0,0)';
+        ctx.beginPath();
+        ctx.arc(sex, sey, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // === Jagged mouth / teeth ===
+    const mouthY = 28;
+    ctx.fillStyle = 'rgb(5,0,10)';
+    ctx.beginPath();
+    ctx.ellipse(0, mouthY, 38, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Teeth (7 triangles)
+    ctx.fillStyle = 'rgb(240,230,255)';
+    for (let tooth = 0; tooth < 7; tooth++) {
+        const tx = -33 + tooth * 11;
+        ctx.beginPath();
+        ctx.moveTo(tx, mouthY - 4);
+        ctx.lineTo(tx + 5, mouthY - 13);
+        ctx.lineTo(tx + 10, mouthY - 4);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Bottom teeth (shorter)
+    ctx.fillStyle = 'rgb(200,190,220)';
+    for (let tooth = 0; tooth < 6; tooth++) {
+        const tx = -28 + tooth * 11;
+        ctx.beginPath();
+        ctx.moveTo(tx, mouthY + 4);
+        ctx.lineTo(tx + 5, mouthY + 10);
+        ctx.lineTo(tx + 10, mouthY + 4);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // === Flash effect (white overlay) ===
+    if (flashActive) {
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(0, 0, R + 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+
+    ctx.restore();
+
+    // === Floating name label under sprite ===
+    ctx.save();
+    ctx.font = `bold 13px ${FONT_MAIN}`;
+    const nameLabel = 'המפלצת של איתי';
+    const nlW = ctx.measureText(nameLabel).width + 14;
+    const nlX = cx - nlW / 2;
+    const nlY = cy + R * scale + 18;
+    const labelAlpha = 0.7 + Math.sin(fc * 0.06) * 0.15;
+    ctx.fillStyle = `rgba(60,0,100,${labelAlpha})`;
+    ctx.beginPath();
+    ctx.roundRect(nlX, nlY - 14, nlW, 20, 5);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(180,0,255,${labelAlpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = `rgba(220,160,255,${labelAlpha})`;
+    ctx.fillText(nameLabel, nlX + 7, nlY);
+    ctx.restore();
 }
 
 function drawBattleArena(ctx, battle) {
@@ -661,33 +919,56 @@ function drawBattleArena(ctx, battle) {
     const platEy = Math.floor(SCREEN_HEIGHT * 0.30);
 
     // Platform ellipse
-    ctx.fillStyle = 'rgb(60,75,55)';
-    ctx.beginPath();
-    ctx.ellipse(platEx + 60, platEy + 20, 80, 15, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgb(80,100,70)';
-    ctx.beginPath();
-    ctx.ellipse(platEx + 60, platEy + 15, 80, 15, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const enemySprite = getMonsterBattleSprite(battle.enemyMon.speciesId);
-    const slideE = battle.anim.enemySlide;
-    const ex = platEx + 60 - enemySprite.width / 2 + slideE;
-    const ey = platEy - enemySprite.height + 8 + enemyBob;
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(ex + 5, platEy - 2, enemySprite.width - 10, 8);
-
-    // Flash effect
-    if (battle.anim.enemyFlash > 0 && battle.anim.enemyFlash % 3 < 2) {
-        ctx.globalAlpha = 0.5;
-        ctx.drawImage(enemySprite, ex, ey);
-        ctx.globalAlpha = 1.0;
-        // White overlay
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.fillRect(ex, ey, enemySprite.width, enemySprite.height);
+    if (battle.isItayBattle) {
+        // Dark void platform with purple glow
+        const platPulse = 0.3 + Math.sin(fc * 0.06) * 0.15;
+        ctx.fillStyle = `rgba(30,0,50,0.9)`;
+        ctx.beginPath();
+        ctx.ellipse(platEx + 60, platEy + 20, 85, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(150,0,220,${platPulse})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(platEx + 60, platEy + 15, 85, 16, 0, 0, Math.PI * 2);
+        ctx.stroke();
     } else {
-        ctx.drawImage(enemySprite, ex, ey);
+        ctx.fillStyle = 'rgb(60,75,55)';
+        ctx.beginPath();
+        ctx.ellipse(platEx + 60, platEy + 20, 80, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgb(80,100,70)';
+        ctx.beginPath();
+        ctx.ellipse(platEx + 60, platEy + 15, 80, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    const slideE = battle.anim.enemySlide;
+    const flashActive = battle.anim.enemyFlash > 0 && battle.anim.enemyFlash % 3 < 2;
+
+    if (battle.isItayBattle) {
+        // === Custom Itay Boss Sprite ===
+        const cx = platEx + 60 + slideE;
+        const cy = platEy - 55 + enemyBob;
+        _drawItayBattleSprite(ctx, cx, cy, fc, flashActive);
+    } else {
+        const enemySprite = getMonsterBattleSprite(battle.enemyMon.speciesId);
+        const ex = platEx + 60 - enemySprite.width / 2 + slideE;
+        const ey = platEy - enemySprite.height + 8 + enemyBob;
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(ex + 5, platEy - 2, enemySprite.width - 10, 8);
+
+        // Flash effect
+        if (flashActive) {
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(enemySprite, ex, ey);
+            ctx.globalAlpha = 1.0;
+            // White overlay
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillRect(ex, ey, enemySprite.width, enemySprite.height);
+        } else {
+            ctx.drawImage(enemySprite, ex, ey);
+        }
     }
 
     // Player platform + sprite (bottom-left)
@@ -727,39 +1008,110 @@ function drawBattleArena(ctx, battle) {
 
 function drawEnemyInfoPanel(ctx, battle) {
     const px = 20, py = 30, pw = 300, ph = 80;
-    drawPanel(ctx, px, py, pw, ph, 'rgba(10,15,35,0.88)', 'rgba(120,140,200,0.45)');
-
     const enemy = battle.enemyMon;
-    const typeColor = TYPE_COLORS[enemy.monType] || WHITE;
 
-    // Name and level
-    ctx.fillStyle = WHITE;
-    ctx.font = `bold 15px ${FONT_MAIN}`;
-    const isTrainer = battle.isTrainerBattle;
-    ctx.fillText(`${enemy.name}${isTrainer ? '' : ' פראי'}`, px + 12, py + 22);
+    if (battle.isItayBattle) {
+        // === ITAY BOSS panel: glowing dark purple ===
+        const fc = battle.anim.frameCount;
+        const glowPulse = 0.5 + Math.sin(fc * 0.07) * 0.3;
 
-    ctx.fillStyle = 'rgba(180,190,230,0.8)';
-    ctx.font = `12px ${FONT_MAIN}`;
-    const lvText = `רמה ${enemy.level}`;
-    const lvW = ctx.measureText(lvText).width;
-    ctx.fillText(lvText, px + pw - lvW - 12, py + 22);
+        // Dark panel fill
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(px, py, pw, ph, 8);
+        ctx.fillStyle = 'rgba(8,0,20,0.95)';
+        ctx.fill();
 
-    // Type badge
-    const typeName = TYPE_NAMES_HE[enemy.monType] || enemy.monType;
-    const badgeText = ` ${typeName} `;
-    ctx.font = `11px ${FONT_MAIN}`;
-    const badgeW = ctx.measureText(badgeText).width + 6;
-    ctx.fillStyle = typeColor;
-    ctx.beginPath();
-    ctx.roundRect(px + 12, py + 30, badgeW, 18, 5);
-    ctx.fill();
-    ctx.fillStyle = BLACK;
-    ctx.font = `bold 11px ${FONT_MAIN}`;
-    ctx.fillText(badgeText, px + 14, py + 44);
+        // Animated purple glow border
+        ctx.strokeStyle = `rgba(160,0,220,${glowPulse})`;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.restore();
 
-    // HP bar
-    const dispEnemyHp = Math.round(battle.anim.displayEnemyHp);
-    drawHealthBar(ctx, px + 12, py + 54, pw - 24, dispEnemyHp, enemy.maxHp, 'HP: ', 16);
+        // Outer glow halo
+        ctx.save();
+        const halo = ctx.createLinearGradient(px, py, px + pw, py + ph);
+        halo.addColorStop(0, `rgba(120,0,200,${glowPulse * 0.25})`);
+        halo.addColorStop(0.5, `rgba(200,0,120,${glowPulse * 0.15})`);
+        halo.addColorStop(1, `rgba(120,0,200,${glowPulse * 0.25})`);
+        ctx.beginPath();
+        ctx.roundRect(px - 3, py - 3, pw + 6, ph + 6, 11);
+        ctx.fillStyle = halo;
+        ctx.fill();
+        ctx.restore();
+
+        // Boss name — red/orange gradient text
+        ctx.save();
+        const nameGrad = ctx.createLinearGradient(px + 12, py + 10, px + 12, py + 30);
+        nameGrad.addColorStop(0, 'rgb(255,80,80)');
+        nameGrad.addColorStop(1, 'rgb(200,20,200)');
+        ctx.fillStyle = nameGrad;
+        ctx.font = `bold 16px ${FONT_MAIN}`;
+        ctx.fillText(enemy.name, px + 12, py + 22);
+        ctx.restore();
+
+        // ⚠ בוס badge
+        ctx.save();
+        ctx.font = `bold 11px ${FONT_MAIN}`;
+        const bossBadge = ' ⚠ בוס ';
+        const bw = ctx.measureText(bossBadge).width + 6;
+        const bossGrad = ctx.createLinearGradient(px + 12, py + 28, px + 12 + bw, py + 46);
+        bossGrad.addColorStop(0, 'rgb(180,0,50)');
+        bossGrad.addColorStop(1, 'rgb(120,0,180)');
+        ctx.fillStyle = bossGrad;
+        ctx.beginPath();
+        ctx.roundRect(px + 12, py + 29, bw, 17, 4);
+        ctx.fill();
+        ctx.fillStyle = 'rgb(255,200,200)';
+        ctx.fillText(bossBadge, px + 14, py + 43);
+        ctx.restore();
+
+        // Level text
+        ctx.fillStyle = 'rgba(220,150,255,0.9)';
+        ctx.font = `12px ${FONT_MAIN}`;
+        const lvText = `רמה ${enemy.level}`;
+        const lvW = ctx.measureText(lvText).width;
+        ctx.fillText(lvText, px + pw - lvW - 12, py + 22);
+
+        // HP bar with red/dark style
+        const dispEnemyHp = Math.round(battle.anim.displayEnemyHp);
+        drawHealthBar(ctx, px + 12, py + 54, pw - 24, dispEnemyHp, enemy.maxHp, 'HP: ', 16);
+
+    } else {
+        // === NORMAL panel ===
+        drawPanel(ctx, px, py, pw, ph, 'rgba(10,15,35,0.88)', 'rgba(120,140,200,0.45)');
+
+        const typeColor = TYPE_COLORS[enemy.monType] || WHITE;
+
+        // Name and level
+        ctx.fillStyle = WHITE;
+        ctx.font = `bold 15px ${FONT_MAIN}`;
+        const isTrainer = battle.isTrainerBattle;
+        ctx.fillText(`${enemy.name}${isTrainer ? '' : ' פראי'}`, px + 12, py + 22);
+
+        ctx.fillStyle = 'rgba(180,190,230,0.8)';
+        ctx.font = `12px ${FONT_MAIN}`;
+        const lvText = `רמה ${enemy.level}`;
+        const lvW = ctx.measureText(lvText).width;
+        ctx.fillText(lvText, px + pw - lvW - 12, py + 22);
+
+        // Type badge
+        const typeName = TYPE_NAMES_HE[enemy.monType] || enemy.monType;
+        const badgeText = ` ${typeName} `;
+        ctx.font = `11px ${FONT_MAIN}`;
+        const badgeW = ctx.measureText(badgeText).width + 6;
+        ctx.fillStyle = typeColor;
+        ctx.beginPath();
+        ctx.roundRect(px + 12, py + 30, badgeW, 18, 5);
+        ctx.fill();
+        ctx.fillStyle = BLACK;
+        ctx.font = `bold 11px ${FONT_MAIN}`;
+        ctx.fillText(badgeText, px + 14, py + 44);
+
+        // HP bar
+        const dispEnemyHp = Math.round(battle.anim.displayEnemyHp);
+        drawHealthBar(ctx, px + 12, py + 54, pw - 24, dispEnemyHp, enemy.maxHp, 'HP: ', 16);
+    }
 }
 
 function drawPlayerInfoPanel(ctx, battle) {
