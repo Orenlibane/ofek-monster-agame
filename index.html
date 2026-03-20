@@ -387,8 +387,24 @@
     <script src="game.js"></script>
 
     <script>
-    // Detect touch device
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    // Detect touch device - robust check for Samsung and other Android devices
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+
+    // Force-show mobile controls on touch devices (bypasses CSS media query
+    // which can fail on Samsung DeX / some Android configs)
+    if (isTouchDevice) {
+        const mc = document.getElementById('mobileControls');
+        const gw = document.getElementById('gameWrapper');
+        if (mc) mc.style.display = 'block';
+        if (gw) {
+            // Use dvh with 100vh fallback for older Android Chrome
+            gw.style.height = 'calc(100vh - 220px)';
+            try { gw.style.height = 'calc(100dvh - 220px)'; } catch(e) {}
+            gw.style.padding = '4px';
+        }
+        document.body.style.height = '100vh';
+        try { document.body.style.height = '100dvh'; } catch(e) {}
+    }
 
     // Responsive canvas sizing
     function resizeCanvas() {

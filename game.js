@@ -109,6 +109,18 @@ class Game {
         // Current user (set by login)
         this._currentUser = null;
 
+        // Party reorder state
+        this._partyDrag = null;       // { sourceIndex, currentY }
+        this._partySwapSource = -1;   // keyboard grab mode: index of grabbed card
+
+        // Itay's Monster (roaming boss)
+        this.itayMonster = {
+            col: 20, row: 15,
+            moveTimer: 0,
+            moveInterval: 150,  // frames between moves (~2.5s at 60fps)
+            eggGiven: false,
+        };
+
         // Input
         this._keysDown = new Set();
         this._setupInput();
@@ -128,6 +140,67 @@ class Game {
             }
             this._onKeyDown(e.key);
         });
+        this._setupPartyDrag();
+    }
+
+    _setupPartyDrag() {
+        const canvas = this.canvas;
+
+        const getCanvasY = (clientY) => {
+            const rect = canvas.getBoundingClientRect();
+            return (clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
+        };
+        const cardIndexAt = (canvasY) => {
+            const idx = Math.floor((canvasY - 80) / 100);
+            return (idx >= 0 && idx < this.player.party.length) ? idx : -1;
+        };
+        const dropTargetFor = (canvasY) => {
+            const raw = Math.round((canvasY - 80 - 45) / 100);
+            return Math.max(0, Math.min(this.player.party.length - 1, raw));
+        };
+
+        const onDragStart = (clientY) => {
+            if (this.state !== GameState.PARTY || this._partySwapSource >= 0) return;
+            const cy = getCanvasY(clientY);
+            const idx = cardIndexAt(cy);
+            if (idx < 0) return;
+            this._partyDrag = { sourceIndex: idx, currentY: cy };
+            this.partyCursor = idx;
+        };
+        const onDragMove = (clientY) => {
+            if (!this._partyDrag || this.state !== GameState.PARTY) return;
+            this._partyDrag.currentY = getCanvasY(clientY);
+        };
+        const onDragEnd = () => {
+            if (!this._partyDrag || this.state !== GameState.PARTY) return;
+            const target = dropTargetFor(this._partyDrag.currentY);
+            if (target !== this._partyDrag.sourceIndex) {
+                const party = this.player.party;
+                const [moved] = party.splice(this._partyDrag.sourceIndex, 1);
+                party.splice(target, 0, moved);
+                this.partyCursor = target;
+                saveGame(this);
+            }
+            this._partyDrag = null;
+        };
+
+        // Mouse drag
+        canvas.addEventListener('mousedown', (e) => { if (e.button === 0) onDragStart(e.clientY); });
+        window.addEventListener('mousemove', (e) => onDragMove(e.clientY));
+        window.addEventListener('mouseup', () => onDragEnd());
+
+        // Touch drag
+        canvas.addEventListener('touchstart', (e) => {
+            if (this.state !== GameState.PARTY) return;
+            onDragStart(e.touches[0].clientY);
+        }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => {
+            if (!this._partyDrag) return;
+            e.preventDefault();
+            onDragMove(e.touches[0].clientY);
+        }, { passive: false });
+        canvas.addEventListener('touchend', () => onDragEnd());
+        canvas.addEventListener('touchcancel', () => { this._partyDrag = null; });
     }
 
     // Main loop
@@ -183,6 +256,8 @@ class Game {
         else if (key === 'p' || key === 'P') {
             this.state = GameState.PARTY;
             this.partyCursor = 0;
+            this._partyDrag = null;
+            this._partySwapSource = -1;
             return;
         } else if (key === 's' || key === 'S') {
             this.state = GameState.SETTINGS;
@@ -227,6 +302,13 @@ class Game {
             return;
         }
 
+        // Check Itay's monster collision (1-tile adjacency)
+        if (Math.abs(this.player.col - this.itayMonster.col) <= 0 &&
+            Math.abs(this.player.row - this.itayMonster.row) <= 0) {
+            this._startItayBattle();
+            return;
+        }
+
         // Check trainer vision
         if (this.state === GameState.OVERWORLD) {
             this._checkTrainerVision();
@@ -238,11 +320,36 @@ class Game {
 
     _partyKey(key) {
         if (key === 'Escape') {
-            this.state = GameState.OVERWORLD;
+            if (this._partySwapSource >= 0) {
+                this._partySwapSource = -1; // cancel grab
+            } else {
+                this._partyDrag = null;
+                this.state = GameState.OVERWORLD;
+            }
         } else if (key === 'ArrowUp') {
-            this.partyCursor = Math.max(0, this.partyCursor - 1);
+            const next = Math.max(0, this.partyCursor - 1);
+            if (this._partySwapSource >= 0 && next !== this.partyCursor) {
+                const p = this.player.party;
+                [p[this.partyCursor], p[next]] = [p[next], p[this.partyCursor]];
+                this._partySwapSource = next;
+                saveGame(this);
+            }
+            this.partyCursor = next;
         } else if (key === 'ArrowDown') {
-            this.partyCursor = Math.min(this.player.party.length - 1, this.partyCursor + 1);
+            const next = Math.min(this.player.party.length - 1, this.partyCursor + 1);
+            if (this._partySwapSource >= 0 && next !== this.partyCursor) {
+                const p = this.player.party;
+                [p[this.partyCursor], p[next]] = [p[next], p[this.partyCursor]];
+                this._partySwapSource = next;
+                saveGame(this);
+            }
+            this.partyCursor = next;
+        } else if (key === 'Enter' || key === 'z' || key === 'Z') {
+            if (this._partySwapSource >= 0) {
+                this._partySwapSource = -1; // confirm & release
+            } else {
+                this._partySwapSource = this.partyCursor; // grab
+            }
         }
     }
 
@@ -428,6 +535,20 @@ class Game {
         this.state = GameState.TRANSITION_IN;
     }
 
+    _startItayBattle() {
+        const boss = createMonster(44, 28);
+        boss.name = 'המפלצת של איתי';
+        // Boost stats for a scary boss
+        boss.hp = boss.maxHp = Math.floor(boss.maxHp * 1.5);
+        boss.attack = Math.floor(boss.attack * 1.4);
+        boss.defense = Math.floor(boss.defense * 1.2);
+        this._pendingEnemy = boss;
+        this._pendingTrainer = null;
+        this._pendingIsItay = true;
+        this._transitionProgress = 0.0;
+        this.state = GameState.TRANSITION_IN;
+    }
+
     // Transitions & battle lifecycle
     _startBattle(enemyMonster) {
         this._pendingEnemy = enemyMonster;
@@ -444,6 +565,11 @@ class Game {
         }
         this.battle = new Battle(playerMon, this._pendingEnemy, this.player, this.storage, this._pendingTrainer);
         this.battle.godMode = (this.settings.god_mode === 1);
+        if (this._pendingIsItay) {
+            this.battle.canCatch = false;
+            this.battle.isItayBattle = true;
+            this._pendingIsItay = false;
+        }
         this._pendingEnemy = null;
         this._pendingTrainer = null;
         this.state = GameState.BATTLE;
@@ -458,6 +584,25 @@ class Game {
             if (this.battle.trainerData.id === 'cave_boss') {
                 this.caveBossDefeated = true;
             }
+        }
+        // Itay's monster defeated
+        if (this.battle.isItayBattle && result === BattleResult.WIN) {
+            if (!this.itayMonster.eggGiven) {
+                this.player.inventory.add('ביצת מפלצת', 1);
+                this.itayMonster.eggGiven = true;
+                this._shopMessage = '!מצאת ביצת מפלצת מסתורית';
+                this._shopMsgTimer = 150;
+            } else {
+                this._shopMessage = '!ניצחת שוב את המפלצת של איתי';
+                this._shopMsgTimer = 90;
+            }
+            // Teleport Itay to a new random passable location
+            let attempts = 0;
+            do {
+                this.itayMonster.col = 3 + Math.floor(Math.random() * 40);
+                this.itayMonster.row = 3 + Math.floor(Math.random() * 40);
+                attempts++;
+            } while (!this.gameMap.isPassable(this.itayMonster.col, this.itayMonster.row) && attempts < 50);
         }
         if (result === BattleResult.LOSE) {
             this.player.healAll();
@@ -501,14 +646,37 @@ class Game {
             }
         }
 
-        if (this._healFlash > 0) {
-            this._healFlash--;
+        if (this._healFlash > 0) this._healFlash--;
+        if (this._saveFlash > 0) this._saveFlash--;
+        if (this._shopMsgTimer > 0) this._shopMsgTimer--;
+
+        // Itay's monster wanders during overworld/transition
+        if (this.state === GameState.OVERWORLD ||
+            this.state === GameState.TRANSITION_IN ||
+            this.state === GameState.TRANSITION_OUT) {
+            this._updateItayMonster();
         }
-        if (this._saveFlash > 0) {
-            this._saveFlash--;
+    }
+
+    _updateItayMonster() {
+        this.itayMonster.moveTimer++;
+        if (this.itayMonster.moveTimer < this.itayMonster.moveInterval) return;
+        this.itayMonster.moveTimer = 0;
+
+        // Shuffle directions and try each
+        const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+        for (let i = dirs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
         }
-        if (this._shopMsgTimer > 0) {
-            this._shopMsgTimer--;
+        for (const [dx, dy] of dirs) {
+            const nx = this.itayMonster.col + dx;
+            const ny = this.itayMonster.row + dy;
+            if (this.gameMap.isPassable(nx, ny)) {
+                this.itayMonster.col = nx;
+                this.itayMonster.row = ny;
+                break;
+            }
         }
     }
 
@@ -523,7 +691,7 @@ class Game {
         } else if (this.state === GameState.CHOOSE_STARTER) {
             drawStarterSelection(ctx, this.starterCursor, this._frameCount);
         } else if (this.state === GameState.OVERWORLD) {
-            drawOverworld(ctx, this.gameMap, this.player, this._frameCount, this.trainers, this.player.defeatedTrainers);
+            drawOverworld(ctx, this.gameMap, this.player, this._frameCount, this.trainers, this.player.defeatedTrainers, this.itayMonster);
             this._renderDayNight();
             drawHud(ctx, this.player);
             this._renderHealFlash();
@@ -534,7 +702,7 @@ class Game {
                 drawBattle(ctx, this.battle);
             }
         } else if (this.state === GameState.PARTY) {
-            drawPartyScreen(ctx, this.player, this.partyCursor);
+            drawPartyScreen(ctx, this.player, this.partyCursor, this._partyDrag, this._partySwapSource);
         } else if (this.state === GameState.COLLECTION) {
             drawCollectionScreen(ctx, this.player, this.storage, this.collectionCursor, this._frameCount);
         } else if (this.state === GameState.MONSTERPEDIA) {
@@ -775,6 +943,7 @@ function buildSaveData(game) {
         hasStarter: game.state !== GameState.START_SCREEN && game.state !== GameState.CHOOSE_STARTER,
         caveSpawned: game.gameMap.caveSpawned,
         caveBossDefeated: game.caveBossDefeated,
+        itayMonster: { col: game.itayMonster.col, row: game.itayMonster.row, eggGiven: game.itayMonster.eggGiven },
     };
 }
 
@@ -828,6 +997,13 @@ function applySaveData(game, data) {
         game.gameMap.spawnCave();
     }
     game.caveBossDefeated = !!data.caveBossDefeated;
+
+    // Itay's monster state
+    if (data.itayMonster) {
+        game.itayMonster.col = data.itayMonster.col || 20;
+        game.itayMonster.row = data.itayMonster.row || 15;
+        game.itayMonster.eggGiven = data.itayMonster.eggGiven || false;
+    }
 
     // If save had a starter, go to overworld
     if (data.hasStarter && game.player.party.length > 0) {

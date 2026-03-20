@@ -45,6 +45,8 @@ class Battle {
         this.state = BattleState.INTRO;
         this.result = null;
         this.godMode = false;
+        this.canCatch = true;
+        this.isItayBattle = false;
 
         this.messages = this.isTrainerBattle
             ? [`!${trainerData.name} מאתגר אותך לקרב`, `!${enemyMonster.name} נשלח לקרב`]
@@ -431,6 +433,11 @@ class Battle {
     }
 
     _tryCatch() {
+        if (this.canCatch === false) {
+            this.messages = ['...המפלצת של איתי לא ניתנת לתפיסה'];
+            this._timedTransition(50, BattleState.PLAYER_TURN);
+            return;
+        }
         if (this.isTrainerBattle) {
             this.messages = ['!אי אפשר לתפוס מפלצת מאמן'];
             this._timedTransition(50, BattleState.PLAYER_TURN);

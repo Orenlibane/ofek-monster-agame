@@ -154,7 +154,7 @@ function cameraOffset(player, gameMap) {
 // Overworld rendering
 // ===================================================================
 
-function drawOverworld(ctx, gameMap, player, frameCount, trainers, defeatedTrainers) {
+function drawOverworld(ctx, gameMap, player, frameCount, trainers, defeatedTrainers, itayMonster) {
     frameCount = frameCount || 0;
     const [camX, camY] = cameraOffset(player, gameMap);
 
@@ -415,6 +415,111 @@ function drawOverworld(ctx, gameMap, player, frameCount, trainers, defeatedTrain
     const px = player.pixelX - camX + (TILE_SIZE - heroSurf.width) / 2;
     const py = player.pixelY - camY + (TILE_SIZE - heroSurf.height) / 2;
     ctx.drawImage(heroSurf, px, py);
+
+    // Draw Itay's Monster
+    if (itayMonster) {
+        _drawItayMonster(ctx, itayMonster, camX, camY, frameCount);
+    }
+}
+
+function _drawItayMonster(ctx, itay, camX, camY, fc) {
+    const screenX = itay.col * TILE_SIZE - camX + TILE_SIZE / 2;
+    const screenY = itay.row * TILE_SIZE - camY + TILE_SIZE / 2;
+    if (screenX < -120 || screenX > SCREEN_WIDTH + 120 || screenY < -120 || screenY > SCREEN_HEIGHT + 120) return;
+
+    const pulse = Math.sin(fc * 0.05);
+    const bob = Math.sin(fc * 0.04) * 5;
+    const radius = 40 + pulse * 5;
+
+    ctx.save();
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(screenX, itay.row * TILE_SIZE - camY + TILE_SIZE + 4, radius * 1.1, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Purple aura glow
+    const aura = 0.18 + pulse * 0.08;
+    const auraGrad = ctx.createRadialGradient(screenX, screenY + bob, 0, screenX, screenY + bob, radius * 1.8);
+    auraGrad.addColorStop(0, `rgba(140,0,255,${aura})`);
+    auraGrad.addColorStop(0.5, `rgba(80,0,160,${aura * 0.4})`);
+    auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.arc(screenX, screenY + bob, radius * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main body
+    const bodyGrad = ctx.createRadialGradient(screenX - 8, screenY + bob - 10, 4, screenX, screenY + bob, radius);
+    bodyGrad.addColorStop(0, 'rgb(90,10,140)');
+    bodyGrad.addColorStop(0.5, 'rgb(45,0,90)');
+    bodyGrad.addColorStop(1, 'rgb(15,0,35)');
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.arc(screenX, screenY + bob, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Spikes on top
+    for (let i = 0; i < 5; i++) {
+        const angle = -Math.PI / 2 + (i - 2) * 0.38 + Math.sin(fc * 0.025 + i) * 0.08;
+        const sx2 = screenX + Math.cos(angle) * radius * 0.9;
+        const sy2 = screenY + bob + Math.sin(angle) * radius * 0.9;
+        const ex = screenX + Math.cos(angle) * (radius + 14 + (i % 2) * 6);
+        const ey = screenY + bob + Math.sin(angle) * (radius + 14 + (i % 2) * 6);
+        ctx.strokeStyle = 'rgb(180,60,255)';
+        ctx.lineWidth = 3 - (i % 2);
+        ctx.beginPath();
+        ctx.moveTo(sx2, sy2);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+    }
+
+    // Glowing eyes
+    const eyeOffX = 13, eyeY = screenY + bob - 10;
+    for (const ex of [screenX - eyeOffX, screenX + eyeOffX]) {
+        const eyeGlow = 0.6 + Math.sin(fc * 0.12) * 0.35;
+        ctx.fillStyle = `rgba(255,0,120,${eyeGlow * 0.35})`;
+        ctx.beginPath(); ctx.arc(ex, eyeY, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,60,160,${eyeGlow})`;
+        ctx.beginPath(); ctx.arc(ex, eyeY, 5.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(ex + 1, eyeY - 1, 2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Teeth
+    for (let t = 0; t < 5; t++) {
+        const tx = screenX - 20 + t * 10;
+        const ty = screenY + bob + radius * 0.42;
+        ctx.fillStyle = 'rgb(230,230,240)';
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx + 4, ty + 9);
+        ctx.lineTo(tx + 8, ty);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // Floating name label
+    const nameFloat = Math.sin(fc * 0.045) * 3;
+    const name = 'המפלצת של איתי';
+    ctx.font = `bold 13px ${FONT_MAIN}`;
+    const nw = ctx.measureText(name).width;
+    const nlx = screenX - nw / 2 - 8;
+    const nly = screenY + bob - radius - 28 + nameFloat;
+    const warnAlpha = 0.75 + Math.sin(fc * 0.1) * 0.25;
+    ctx.fillStyle = `rgba(50,0,90,${warnAlpha * 0.92})`;
+    ctx.beginPath();
+    ctx.roundRect(nlx - 4, nly - 14, nw + 24, 19, 5);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(200,60,255,${warnAlpha * 0.7})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(nlx - 4, nly - 14, nw + 24, 19, 5);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(230,110,255,${warnAlpha})`;
+    ctx.fillText(name, nlx + 4, nly);
 }
 
 function drawHud(ctx, player) {
@@ -961,7 +1066,10 @@ function drawMessageBox(ctx, messages, frameCount) {
 // Party screen
 // ===================================================================
 
-function drawPartyScreen(ctx, player, cursor) {
+function drawPartyScreen(ctx, player, cursor, dragInfo, swapSource) {
+    dragInfo = dragInfo || null;
+    swapSource = (swapSource !== undefined && swapSource !== null) ? swapSource : -1;
+
     // Background
     const bgGrad = ctx.createLinearGradient(0, 0, 0, SCREEN_HEIGHT);
     bgGrad.addColorStop(0, 'rgb(10,10,28)');
@@ -976,9 +1084,19 @@ function drawPartyScreen(ctx, player, cursor) {
     const titleW = ctx.measureText(title).width;
     ctx.fillText(title, SCREEN_WIDTH / 2 - titleW / 2, 36);
 
+    // Hint text
     ctx.fillStyle = 'rgba(140,150,190,0.5)';
     ctx.font = `12px ${FONT_MAIN}`;
-    const hint = '[ESC] סגירה   [למעלה/למטה] ניווט';
+    let hint;
+    if (swapSource >= 0) {
+        hint = '[ESC/OK] סיום   [↑/↓] הזז מפלצת';
+    } else if (dragInfo) {
+        hint = '...גרור למיקום הרצוי';
+    } else if (window.isTouchDevice) {
+        hint = 'OK: בחר להזזה   גרור כרטיס לשינוי סדר';
+    } else {
+        hint = '[ESC] סגירה   [OK/Enter] תפוס/שחרר להזזה   גרור עם עכבר';
+    }
     const hintW = ctx.measureText(hint).width;
     ctx.fillText(hint, SCREEN_WIDTH / 2 - hintW / 2, 56);
 
@@ -989,23 +1107,79 @@ function drawPartyScreen(ctx, player, cursor) {
         return;
     }
 
-    let y = 80;
-    for (let i = 0; i < player.party.length; i++) {
-        const mon = player.party[i];
-        const selected = i === cursor;
-        const borderCol = selected ? YELLOW : 'rgba(70,70,110,0.5)';
-        const bg = selected ? 'rgba(25,30,60,0.94)' : 'rgba(14,16,38,0.86)';
+    // Build display order (live preview while dragging)
+    let displayItems = player.party.map((mon, idx) => ({ mon, origIdx: idx }));
+    let dragDisplayIdx = -1;
+    if (dragInfo) {
+        const rawTarget = Math.round((dragInfo.currentY - 80 - 45) / 100);
+        const dropTarget = Math.max(0, Math.min(displayItems.length - 1, rawTarget));
+        const [moved] = displayItems.splice(dragInfo.sourceIndex, 1);
+        displayItems.splice(dropTarget, 0, moved);
+        dragDisplayIdx = dropTarget;
+    }
 
-        drawPanel(ctx, 30, y, SCREEN_WIDTH - 60, 90, bg, borderCol, selected ? 2 : 1);
+    for (let i = 0; i < displayItems.length; i++) {
+        const { mon, origIdx } = displayItems[i];
+        const isDragging  = dragInfo !== null && i === dragDisplayIdx;
+        const isSwapSrc   = !dragInfo && origIdx === swapSource;
+        const isSelected  = dragInfo ? isDragging : (origIdx === cursor);
+        const isLeader    = i === 0;
+        const y = 80 + i * 100;
 
-        // Mini sprite
+        let borderCol, bg;
+        if (isDragging) {
+            borderCol = 'rgba(80,200,255,0.95)';
+            bg = 'rgba(8,36,65,0.97)';
+        } else if (isSwapSrc) {
+            borderCol = 'rgba(255,200,50,0.95)';
+            bg = 'rgba(40,34,5,0.97)';
+        } else if (isSelected) {
+            borderCol = YELLOW;
+            bg = 'rgba(25,30,60,0.94)';
+        } else {
+            borderCol = 'rgba(70,70,110,0.5)';
+            bg = 'rgba(14,16,38,0.86)';
+        }
+
+        ctx.globalAlpha = (dragInfo && !isDragging) ? 0.55 : 1.0;
+        drawPanel(ctx, 30, y, SCREEN_WIDTH - 60, 90, bg, borderCol, (isSelected || isDragging || isSwapSrc) ? 2.5 : 1);
+        ctx.globalAlpha = 1.0;
+
+        // Grab handle
+        ctx.fillStyle = isDragging ? 'rgba(80,200,255,0.8)'
+                      : isSwapSrc ? 'rgba(255,200,50,0.7)'
+                      : 'rgba(180,190,220,0.28)';
+        ctx.font = `18px ${FONT_MAIN}`;
+        ctx.fillText('⠿', 40, y + 53);
+
+        // Leader badge (top right of card)
+        if (isLeader) {
+            ctx.font = `bold 11px ${FONT_MAIN}`;
+            const lbTxt = '★ מוביל';
+            const lbW = ctx.measureText(lbTxt).width;
+            ctx.fillStyle = 'rgba(255,200,30,0.15)';
+            ctx.beginPath();
+            ctx.roundRect(SCREEN_WIDTH - 30 - lbW - 16, y + 5, lbW + 12, 17, 4);
+            ctx.fill();
+            ctx.fillStyle = YELLOW;
+            ctx.fillText(lbTxt, SCREEN_WIDTH - 30 - lbW - 10, y + 18);
+        }
+
+        // Swap-mode indicator
+        if (isSwapSrc) {
+            ctx.font = `11px ${FONT_MAIN}`;
+            const smTxt = '↕ מהזז...';
+            ctx.fillStyle = 'rgba(255,200,50,0.7)';
+            ctx.fillText(smTxt, SCREEN_WIDTH - 30 - ctx.measureText(smTxt).width - 10, y + 18);
+        }
+
+        // Mini sprite (shifted right for grab handle)
         const mini = getMonsterMiniSprite(mon.speciesId);
-        ctx.drawImage(mini, 45, y + (90 - mini.height) / 2);
-        const infoX = 45 + mini.width + 14;
+        ctx.drawImage(mini, 58, y + (90 - mini.height) / 2);
+        const infoX = 58 + mini.width + 12;
 
         // Name & level
-        const typeCol = TYPE_COLORS[mon.monType] || WHITE;
-        ctx.fillStyle = selected ? YELLOW : WHITE;
+        ctx.fillStyle = (isSelected || isDragging || isSwapSrc) ? YELLOW : WHITE;
         ctx.font = `bold 15px ${FONT_MAIN}`;
         ctx.fillText(`${mon.name}`, infoX, y + 22);
         ctx.fillStyle = 'rgba(180,190,230,0.7)';
@@ -1013,6 +1187,7 @@ function drawPartyScreen(ctx, player, cursor) {
         ctx.fillText(`רמה ${mon.level}`, infoX + 100, y + 22);
 
         // Type badge
+        const typeCol = TYPE_COLORS[mon.monType] || WHITE;
         const partyTypeName = TYPE_NAMES_HE[mon.monType] || mon.monType;
         const badgeTextP = ` ${partyTypeName} `;
         ctx.font = `11px ${FONT_MAIN}`;
@@ -1036,8 +1211,6 @@ function drawPartyScreen(ctx, player, cursor) {
         const movesStr = mon.moves.map(m => m.name).join(', ');
         ctx.fillText(`מהלכים: ${movesStr}`, statsX, y + 42);
         ctx.fillText(`נס: ${mon.experience}/${mon.xpToNext}`, statsX, y + 62);
-
-        y += 100;
     }
 }
 
