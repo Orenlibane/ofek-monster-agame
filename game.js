@@ -205,18 +205,36 @@ class Game {
 
     // Main loop
     _loop(timestamp) {
+        // Always schedule the next frame first — this ensures the loop
+        // never dies even if _update or _render throw an exception.
+        requestAnimationFrame((t) => this._loop(t));
+
         const delta = timestamp - this._lastTime;
         this._lastTime = timestamp;
         this._accumulator += delta;
 
-        // Fixed timestep
+        // Fixed timestep updates
         while (this._accumulator >= this._frameDuration) {
-            this._update();
+            try {
+                this._update();
+            } catch (err) {
+                console.error('[Game] _update error:', err);
+                // Safety: if we're in a broken battle state, force-end it
+                if (this.state === GameState.BATTLE && this.battle) {
+                    try { this._endBattle(); } catch (_) {
+                        this.battle = null;
+                        this.state = GameState.OVERWORLD;
+                    }
+                }
+            }
             this._accumulator -= this._frameDuration;
         }
 
-        this._render();
-        requestAnimationFrame((t) => this._loop(t));
+        try {
+            this._render();
+        } catch (err) {
+            console.error('[Game] _render error:', err);
+        }
     }
 
     // Input handling
@@ -647,9 +665,22 @@ class Game {
                 this.state = GameState.OVERWORLD;
             }
         } else if (this.state === GameState.BATTLE && this.battle) {
-            this.battle.update();
-            if (this.battle.isOver) {
+            try { this.battle.update(); } catch (battleErr) {
+                console.error('[Battle] update error:', battleErr);
+            }
+            if (this.battle && this.battle.isOver) {
                 this._endBattle();
+            } else if (this.battle && this.battle.result !== null) {
+                // Safety valve: result is set but isOver never became true.
+                // If we've been waiting more than 400 frames (~6 sec), force-end.
+                this._battleStallFrames = (this._battleStallFrames || 0) + 1;
+                if (this._battleStallFrames > 400) {
+                    console.warn('[Game] Battle stall detected — forcing end');
+                    this._battleStallFrames = 0;
+                    this._endBattle();
+                }
+            } else {
+                this._battleStallFrames = 0;
             }
         }
 
